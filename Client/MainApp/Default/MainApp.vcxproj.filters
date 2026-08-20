@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="00.MainApp">
+      <UniqueIdentifier>{59520129-20c4-4e6e-9401-50a4067d2712}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="99.Headers">
+      <UniqueIdentifier>{d08c48da-4dc3-4224-8e27-0147924f1636}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj">
+      <UniqueIdentifier>{8884c3d9-b733-491b-b349-369422f5a40f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ShaderFiles">
+      <UniqueIdentifier>{e99b9b44-ecd9-49f4-adc3-9e80038234c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Camera">
+      <UniqueIdentifier>{32382020-070a-4b77-ba66-9e95a2d49aa6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Tank">
+      <UniqueIdentifier>{17488b75-722f-4abb-8ebd-f14f15f9b763}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="98.ForServer">
+      <UniqueIdentifier>{47aa2765-5e50-463f-ab17-d70c686d5da2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="98.ForServer\Client_Globals">
+      <UniqueIdentifier>{887a7803-05c7-488f-9dcb-c6ac493ee9a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client_Pch">
+      <UniqueIdentifier>{7fbf3937-84d2-4775-a9c3-147bb8dac87d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="98.ForServer\Protocol">
+      <UniqueIdentifier>{e4930fd1-7a10-4677-a513-e0d99c91ccc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="98.ForServer\PacketHandler">
+      <UniqueIdentifier>{cc336ed7-ec91-4d01-b98a-ab0ee2c52db6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Box">
+      <UniqueIdentifier>{a282c663-3323-4b1e-a042-4082915e0819}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Terrain">
+      <UniqueIdentifier>{ee3eb46d-163d-4333-9bc2-e60149954506}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Effect">
+      <UniqueIdentifier>{f01edfda-8a9b-4991-883c-33c027880920}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI">
+      <UniqueIdentifier>{7545ea8f-d334-473c-ab7d-3bf8540b74f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\WinningTeam">
+      <UniqueIdentifier>{bbda55c2-cb62-41ab-a85a-189e1869ff7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Trees">
+      <UniqueIdentifier>{c925d9d7-8430-4f6b-9e41-7610f533040b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby">
+      <UniqueIdentifier>{42dfef34-e2ef-4590-a791-06368658bfbc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-00.GameLobby">
+      <UniqueIdentifier>{0085ea6f-40fe-41c0-8a45-8a97a488c99b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-01.Level_Manager">
+      <UniqueIdentifier>{ccf259fb-924f-4b8a-bc4f-f65491be11fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-02.Bmp_Manager">
+      <UniqueIdentifier>{703788e3-527e-41e2-a5b4-2622ba2790ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-03.Object_Manager">
+      <UniqueIdentifier>{cb149efe-af32-4209-94c8-ce76aa19f708}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-01.Level_Manager\Levels">
+      <UniqueIdentifier>{f86ba70d-d07c-4204-bca6-130a649ca3e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-02.Bmp_Manager\MyBmp">
+      <UniqueIdentifier>{8905c854-3e3a-447b-b577-879c6640fff6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-03.Object_Manager\GameObject">
+      <UniqueIdentifier>{f756aaa7-a504-4e86-b44e-864556f72cc3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-04.Collision_Manager">
+      <UniqueIdentifier>{4c32c207-fe16-49cd-a6f9-7de8003439ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-03.Object_Manager\GameObject\Button">
+      <UniqueIdentifier>{b864821d-3027-424c-b408-077dc56f110f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-05.Key_Mananger">
+      <UniqueIdentifier>{eba23443-b629-4c03-83bd-cc78367855df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="98.ForServer\Network_Manager">
+      <UniqueIdentifier>{964240b0-8df7-4974-bb2e-c6bb15770182}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-03.Object_Manager\GameObject\RoomLIst">
+      <UniqueIdentifier>{1bd52ee8-43ea-4b28-a825-06a89219d3fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-06.Room_Manager">
+      <UniqueIdentifier>{1e7baa7d-dd60-4ad6-8bf9-f08fb43d09ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-01.Level_Manager\Levels\0.Level_Menu">
+      <UniqueIdentifier>{6d2020d3-0c70-4467-ae43-d5c2f7814d54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-01.Level_Manager\Levels\1.Level_RoomList">
+      <UniqueIdentifier>{45028d51-f75b-48e8-835e-b1040d9922cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="97.ForLobby\97-01.Level_Manager\Levels\2.Level_Room">
+      <UniqueIdentifier>{026de808-6b7f-4231-8d01-e7b8a35043c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UIHP">
+      <UniqueIdentifier>{bb6add5b-28b3-4733-a3db-8dec01ffc6d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UIReloading">
+      <UniqueIdentifier>{9bf48ee1-df4e-463e-bd51-cb5128644031}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UITeamPercent">
+      <UniqueIdentifier>{41f6e742-ac8b-4687-b957-bc1c0ac8d203}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UISelectPos">
+      <UniqueIdentifier>{5f21ce70-a44e-4944-8de2-a739ccb4aeb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shader">
+      <UniqueIdentifier>{2aace5ba-6af6-4e50-904c-d294195dd2ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UIDamaged">
+      <UniqueIdentifier>{deb6b792-eb55-4848-8bee-54d323bffa14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Drone">
+      <UniqueIdentifier>{13d53018-77b1-4a38-8ed9-882fdd59e133}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaderfile">
+      <UniqueIdentifier>{ce8f14ab-cd8b-4c21-b068-878e6efa9294}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Camera\Camera_Drone">
+      <UniqueIdentifier>{35333502-ece4-457d-a81b-84790e080fe0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\BulletPath">
+      <UniqueIdentifier>{a33d4228-195c-4a60-b1b6-d0bbdb2a9d54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Zet">
+      <UniqueIdentifier>{dd913489-609a-4aab-a8b3-a8d6ad8e5384}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="StateMgr">
+      <UniqueIdentifier>{732b992e-48eb-4b94-af94-a4b7a216a773}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UINumber">
+      <UniqueIdentifier>{2a402a52-0650-4593-9eb1-6699e96b4cec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UITime">
+      <UniqueIdentifier>{a3718a9a-1589-4aae-9632-1c4a1e190cab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UISkillBox">
+      <UniqueIdentifier>{cef9fd98-0b9b-4425-acc3-14b40f816bb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UICrossHair">
+      <UniqueIdentifier>{e6a22d89-9874-4184-b337-3323b18a00e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UIAirDrop">
+      <UniqueIdentifier>{a8a678bb-c7f3-4393-b084-091b7becc43e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UIDEFEAT">
+      <UniqueIdentifier>{c659a85e-6697-4eaf-991b-3587587d79ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UIVICTORY">
+      <UniqueIdentifier>{f3acf15f-4bd3-417b-942f-4ff553252d25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="96.ForSound">
+      <UniqueIdentifier>{1ed05ea0-c998-4cdb-91ec-f13835008f38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="96.ForSound\FMod_Manager">
+      <UniqueIdentifier>{dc5d6c9d-cb4d-4837-9f90-18f1e60faaae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\Ping">
+      <UniqueIdentifier>{b9868416-62c3-4726-9f03-5d740639f90a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.DefaultObj\UI\UICompass">
+      <UniqueIdentifier>{617479a7-3c82-4e89-b3b9-394a9bcb7620}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\public\Client_Defines.h">
+      <Filter>99.Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Camera_Free.h">
+      <Filter>02.Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Tank.h">
+      <Filter>01.DefaultObj\Tank</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Client_pch.h">
+      <Filter>Client_Pch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\ClientPacketHandler.h">
+      <Filter>98.ForServer\PacketHandler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Client_Globals.h">
+      <Filter>98.ForServer\Client_Globals</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\BoxObj.h">
+      <Filter>01.DefaultObj\Box</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\DefaultObj.h">
+      <Filter>01.DefaultObj\Box</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Terrain.h">
+      <Filter>01.DefaultObj\Terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Effect.h">
+      <Filter>01.DefaultObj\Effect</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\WinningTeam.h">
+      <Filter>01.DefaultObj\WinningTeam</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Tree.h">
+      <Filter>01.DefaultObj\Trees</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\GameLobby.h">
+      <Filter>97.ForLobby\97-00.GameLobby</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Level_Manager.h">
+      <Filter>97.ForLobby\97-01.Level_Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Object_Manager.h">
+      <Filter>97.ForLobby\97-03.Object_Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Bmp_Manager.h">
+      <Filter>97.ForLobby\97-02.Bmp_Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Level.h">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\MyBmp.h">
+      <Filter>97.ForLobby\97-02.Bmp_Manager\MyBmp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\GameObject.h">
+      <Filter>97.ForLobby\97-03.Object_Manager\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Define.h">
+      <Filter>97.ForLobby</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Level_Menu.h">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels\0.Level_Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Button.h">
+      <Filter>97.ForLobby\97-03.Object_Manager\GameObject\Button</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\AbstractFactory.h">
+      <Filter>97.ForLobby</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Key_Manager.h">
+      <Filter>97.ForLobby\97-05.Key_Mananger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Network_Manager.h">
+      <Filter>98.ForServer\Network_Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Protocol.h">
+      <Filter>98.ForServer\Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\SendBuffer.h">
+      <Filter>98.ForServer\Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Level_RoomList.h">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels\1.Level_RoomList</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\RoomListBar.h">
+      <Filter>97.ForLobby\97-03.Object_Manager\GameObject\RoomLIst</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Room_Manager.h">
+      <Filter>97.ForLobby\97-06.Room_Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Level_Room.h">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels\2.Level_Room</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UIHP.h">
+      <Filter>01.DefaultObj\UI\UIHP</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UIReloading.h">
+      <Filter>01.DefaultObj\UI\UIReloading</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UITeamPercent.h">
+      <Filter>01.DefaultObj\UI\UITeamPercent</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UISelectPos.h">
+      <Filter>01.DefaultObj\UI\UISelectPos</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UIKill.h">
+      <Filter>01.DefaultObj\UI\UIDamaged</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UIDamaged.h">
+      <Filter>01.DefaultObj\UI\UIDamaged</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Drone.h">
+      <Filter>01.DefaultObj\Drone</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Camera_Drone.h">
+      <Filter>02.Camera\Camera_Drone</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\BulletPath.h">
+      <Filter>01.DefaultObj\BulletPath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Zet.h">
+      <Filter>01.DefaultObj\Zet</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\StateMgr.h">
+      <Filter>StateMgr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UICrossHair.h">
+      <Filter>01.DefaultObj\UI\UICrossHair</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UINumber.h">
+      <Filter>01.DefaultObj\UI\UINumber</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UITime.h">
+      <Filter>01.DefaultObj\UI\UITime</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\AirDrop.h">
+      <Filter>01.DefaultObj\UI\UIAirDrop</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UI_VICTORY.h">
+      <Filter>01.DefaultObj\UI\UIAirDrop</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UISkillBox.h">
+      <Filter>01.DefaultObj\UI\UIAirDrop</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UI_DEFEAT.h">
+      <Filter>01.DefaultObj\UI\UIDEFEAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\FMOD_Manager.h">
+      <Filter>96.ForSound\FMod_Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\MainApp.h">
+      <Filter>00.MainApp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\Ping.h">
+      <Filter>01.DefaultObj\Ping</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\UICompass.h">
+      <Filter>01.DefaultObj\UI\UICompass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\SmokeEffect.h">
+      <Filter>01.DefaultObj\Effect</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\private\Camera_Free.cpp">
+      <Filter>02.Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Tank.cpp">
+      <Filter>01.DefaultObj\Tank</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Client_pch.cpp">
+      <Filter>Client_Pch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\ClientPacketHandler.cpp">
+      <Filter>98.ForServer\PacketHandler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Client_Globals.cpp">
+      <Filter>98.ForServer\Client_Globals</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\MainApp.cpp">
+      <Filter>00.MainApp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\BoxObj.cpp">
+      <Filter>01.DefaultObj\Box</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\DefaultObj.cpp">
+      <Filter>01.DefaultObj\Box</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Terrain.cpp">
+      <Filter>01.DefaultObj\Terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Effect.cpp">
+      <Filter>01.DefaultObj\Effect</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\WinningTeam.cpp">
+      <Filter>01.DefaultObj\WinningTeam</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Tree.cpp">
+      <Filter>01.DefaultObj\Trees</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\GameLobby.cpp">
+      <Filter>97.ForLobby\97-00.GameLobby</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Level_Manager.cpp">
+      <Filter>97.ForLobby\97-01.Level_Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Object_Manager.cpp">
+      <Filter>97.ForLobby\97-03.Object_Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Bmp_Manager.cpp">
+      <Filter>97.ForLobby\97-02.Bmp_Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Level.cpp">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\MyBmp.cpp">
+      <Filter>97.ForLobby\97-02.Bmp_Manager\MyBmp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\GameObject.cpp">
+      <Filter>97.ForLobby\97-03.Object_Manager\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Level_Menu.cpp">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels\0.Level_Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Level_RoomList.cpp">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels\1.Level_RoomList</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Button.cpp">
+      <Filter>97.ForLobby\97-03.Object_Manager\GameObject\Button</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Key_Manager.cpp">
+      <Filter>97.ForLobby\97-05.Key_Mananger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Network_Manager.cpp">
+      <Filter>98.ForServer\Network_Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\RoomListBar.cpp">
+      <Filter>97.ForLobby\97-03.Object_Manager\GameObject\RoomLIst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Room_Manager.cpp">
+      <Filter>97.ForLobby\97-06.Room_Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Level_Room.cpp">
+      <Filter>97.ForLobby\97-01.Level_Manager\Levels\2.Level_Room</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UIHP.cpp">
+      <Filter>01.DefaultObj\UI\UIHP</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UIReloading.cpp">
+      <Filter>01.DefaultObj\UI\UIReloading</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UITeamPercent.cpp">
+      <Filter>01.DefaultObj\UI\UITeamPercent</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UISelectPos.cpp">
+      <Filter>01.DefaultObj\UI\UISelectPos</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UIDamaged.cpp">
+      <Filter>01.DefaultObj\UI\UIDamaged</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UIKill.cpp">
+      <Filter>01.DefaultObj\UI\UIDamaged</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Drone.cpp">
+      <Filter>01.DefaultObj\Drone</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Camera_Drone.cpp">
+      <Filter>02.Camera\Camera_Drone</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\BulletPath.cpp">
+      <Filter>01.DefaultObj\BulletPath</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Zet.cpp">
+      <Filter>01.DefaultObj\Zet</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\StateMgr.cpp">
+      <Filter>StateMgr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UICrossHair.cpp">
+      <Filter>01.DefaultObj\UI\UICrossHair</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UINumber.cpp">
+      <Filter>01.DefaultObj\UI\UINumber</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UITime.cpp">
+      <Filter>01.DefaultObj\UI\UITime</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\AirDrop.cpp">
+      <Filter>01.DefaultObj\UI\UIAirDrop</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UI_VICTORY.cpp">
+      <Filter>01.DefaultObj\UI\UIAirDrop</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UISkillBox.cpp">
+      <Filter>01.DefaultObj\UI\UIAirDrop</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UI_DEFEAT.cpp">
+      <Filter>01.DefaultObj\UI\UIDEFEAT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\FMOD_Manager.cpp">
+      <Filter>96.ForSound\FMod_Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\Ping.cpp">
+      <Filter>01.DefaultObj\Ping</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\UICompass.cpp">
+      <Filter>01.DefaultObj\UI\UICompass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\private\SmokeEffect.cpp">
+      <Filter>01.DefaultObj\Effect</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\bin\Shaders\TankVS.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\TankPS.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\Common.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\LightingUtil.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\CommonTank.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\Default.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\Sky.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\Effect.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\UI.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders\Shadows.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\Common.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\Default.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\LightingUtil.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\ShadowDebug.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\Shadows.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\Sky.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\ShaderFiles\LightingUtil.hlsl">
+      <Filter>Shaderfile</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\Default3.hlsl">
+      <Filter>ShaderFiles</Filter>
+    </FxCompile>
+    <FxCompile Include="..\bin\Shaders1\BulletInstance.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>

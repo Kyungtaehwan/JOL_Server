@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "Terrain_Manager.h"
 #include "fstream"
 
@@ -14,24 +14,65 @@ bool Terrain_Manager::Read_Map(const std::string& filePath, int width, int heigh
     m_height = height;
     m_cellSpacing = cellSpacing;
 
-    m_heightMap.resize(width * height);
+    m_heightMap.resize(size_t(width) * height);
 
-    float fx, y, fz;
-    for (int z = 0; z < height; ++z)
+    // ------------------------------------------------------------
+    //  í˜•ì‹ 1 : Terrain4096.hgt  - í´ë¼ê°€ ì“°ëŠ” ê²ƒê³¼ ê°™ì€ íŒŒì¼
+    //
+    //  [uint32 MAP][float MAP*MAP]  ì´ê³  ìˆœì„œëŠ” [z * MAP + x] ë¡œ ì—¬ê¸°ì™€ ê°™ë‹¤.
+    //  í´ë¼ ë Œë”ë§(CVIBuffer_Terrain::Load_HeightMap)ê³¼ ì™„ì „íˆ ê°™ì€ ë°ì´í„°ë¥¼
+    //  ì½ìœ¼ë¯€ë¡œ ì„œë²„ì™€ í´ë¼ì˜ ì§€í˜•ì´ ì–´ê¸‹ë‚  ìˆ˜ ì—†ë‹¤.
+    //
+    //  íƒ±í¬ê°€ ì‹¤ì œë¡œ êµ´ëŸ¬ë‹¤ë‹ˆëŠ” PhysX í•˜ì´íŠ¸í•„ë“œ(HeightD.png)ì™€ë„
+    //  ë†’ì´ 17.442~68.544 vs 17.440~68.540 ìœ¼ë¡œ ì¼ì¹˜í•œë‹¤(ìµœëŒ€ì°¨ 0.008).
+    //  ê·¸ 0.008 ì€ PhysX ê°€ ìƒ˜í”Œì„ PxI16 ìœ¼ë¡œ ë‹´ìœ¼ë©° ì†Œìˆ˜ë¶€ë¥¼ ë²„ë¦¬ëŠ” ì–‘ì´ë‹¤.
+    // ------------------------------------------------------------
+    uint32_t magic = 0;
+    inFile.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+
+    if (inFile.gcount() == sizeof(magic) && magic == static_cast<uint32_t>(width))
     {
-        for (int x = 0; x < width; ++x)
-        {
-            inFile.read(reinterpret_cast<char*>(&fx), sizeof(float));
-            inFile.read(reinterpret_cast<char*>(&y), sizeof(float));
-            inFile.read(reinterpret_cast<char*>(&fz), sizeof(float));
+        const std::streamsize need =
+            static_cast<std::streamsize>(sizeof(float) * m_heightMap.size());
 
-            int idx = Get_Index(x, z);
-            m_heightMap[idx] = y;
+        inFile.read(reinterpret_cast<char*>(m_heightMap.data()), need);
 
-        } 
+        if (inFile.gcount() == need)
+            return true;
+
+        // ì˜ë¦° íŒŒì¼. 0 ë†’ì´ë¡œ ë„ëŠ” ê²ƒë³´ë‹¤ ì‹¤íŒ¨ë¥¼ ì•Œë¦¬ëŠ” í¸ì´ ë‚«ë‹¤.
+        m_heightMap.clear();
+        return false;
     }
 
-    inFile.close();
+    // ------------------------------------------------------------
+    //  í˜•ì‹ 2 : Terrain4096Map.bin - ì •ì ë§ˆë‹¤ x,y,z ì„¸ ê°œê°€ ë“¤ì–´ìˆëŠ” ì›ë³¸
+    //
+    //  y ë§Œ í•„ìš”í•˜ì§€ë§Œ í˜•ì‹ì´ ê·¸ë ‡ê²Œ ìƒê²¼ë‹¤. ì˜ˆì „ì—ëŠ” float í•˜ë‚˜ì”© read() ë¥¼
+    //  5000ë§Œ ë²ˆ ë¶ˆë €ëŠ”ë°, ì¤„ ë‹¨ìœ„ë¡œ ì½ìœ¼ë©´ ê°™ì€ ê²°ê³¼ê°€ í›¨ì”¬ ë¹¨ë¦¬ ë‚˜ì˜¨ë‹¤.
+    // ------------------------------------------------------------
+    inFile.clear();
+    inFile.seekg(0, std::ios::beg);
+
+    std::vector<float> row(size_t(width) * 3);
+
+    for (int z = 0; z < height; ++z)
+    {
+        const std::streamsize need =
+            static_cast<std::streamsize>(sizeof(float) * row.size());
+
+        inFile.read(reinterpret_cast<char*>(row.data()), need);
+
+        if (inFile.gcount() != need)
+        {
+            m_heightMap.clear();
+            return false;
+        }
+
+        for (int x = 0; x < width; ++x)
+            m_heightMap[Get_Index(x, z)] = row[size_t(x) * 3 + 1];
+    }
+
     return true;
 }
 
@@ -63,52 +104,60 @@ void Terrain_Manager::Show_MapData()
 
 
 
-// ¼¼ Á¡À¸·Î Æò¸éÀÇ ¹æÁ¤½ÄÀ» ±¸ÇÏ´Â ÇÔ¼ö (XMPlaneFromPoints ´ëÃ¼)
-// Æò¸é ¹æÁ¤½Ä: Ax + By + Cz + D = 0
-// ¹İÈ¯°ª: Vector4 { A, B, C, D }
+// ì„¸ ì ìœ¼ë¡œ í‰ë©´ì˜ ë°©ì •ì‹ì„ êµ¬í•˜ëŠ” í•¨ìˆ˜ (XMPlaneFromPoints ëŒ€ì²´)
+// í‰ë©´ ë°©ì •ì‹: Ax + By + Cz + D = 0
+// ë°˜í™˜ê°’: Vector4 { A, B, C, D }
 Vector4 Terrain_Manager::PlaneFromPoints(const Vector4& p1, const Vector4& p2, const Vector4& p3)
 {
-    // Æò¸é À§ÀÇ µÎ º¤ÅÍ¸¦ »ı¼ºÇÕ´Ï´Ù (p1->p2, p1->p3)
+    // í‰ë©´ ìœ„ì˜ ë‘ ë²¡í„°ë¥¼ ìƒì„±í•©ë‹ˆë‹¤ (p1->p2, p1->p3)
     Vector4 v1 = { p2.x - p1.x, p2.y - p1.y, p2.z - p1.z, 0.f };
     Vector4 v2 = { p3.x - p1.x, p3.y - p1.y, p3.z - p1.z, 0.f };
 
-    // ¿ÜÀû(Cross Product)À» ÅëÇØ Æò¸éÀÇ ¹ı¼± º¤ÅÍ N(A, B, C)¸¦ ±¸ÇÕ´Ï´Ù.
+    // ì™¸ì (Cross Product)ì„ í†µí•´ í‰ë©´ì˜ ë²•ì„  ë²¡í„° N(A, B, C)ë¥¼ êµ¬í•©ë‹ˆë‹¤.
     Vector4 normal;
     normal.x = (v1.y * v2.z) - (v1.z * v2.y); // A
     normal.y = (v1.z * v2.x) - (v1.x * v2.z); // B
     normal.z = (v1.x * v2.y) - (v1.y * v2.x); // C
 
-    // ¹ı¼± º¤ÅÍ¸¦ Á¤±ÔÈ­(Normalize)ÇÕ´Ï´Ù. (±æÀÌ¸¦ 1·Î ¸¸µê)
+    // ë²•ì„  ë²¡í„°ë¥¼ ì •ê·œí™”(Normalize)í•©ë‹ˆë‹¤. (ê¸¸ì´ë¥¼ 1ë¡œ ë§Œë“¦)
     float length = std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-    if (length > 1e-6f) { // 0À¸·Î ³ª´©´Â °ÍÀ» ¹æÁö
+    if (length > 1e-6f) { // 0ìœ¼ë¡œ ë‚˜ëˆ„ëŠ” ê²ƒì„ ë°©ì§€
         normal.x /= length;
         normal.y /= length;
         normal.z /= length;
     }
 
-    // D °ªÀ» °è»êÇÕ´Ï´Ù: D = -(N ¡¤ p1) = -(A*x1 + B*y1 + C*z1)
+    // D ê°’ì„ ê³„ì‚°í•©ë‹ˆë‹¤: D = -(N Â· p1) = -(A*x1 + B*y1 + C*z1)
     normal.w = -(normal.x * p1.x + normal.y * p1.y + normal.z * p1.z); // D
 
     return normal;
 }
 
-// ¿äÃ»ÇÏ½Å ÇÔ¼ö¸¦ ¼öÁ¤ÇÑ ¹öÀüÀÔ´Ï´Ù.
-// (Å¬·¡½º ¸â¹ö ÇÔ¼öÀÌ¹Ç·Î, ½ÇÁ¦ »ç¿ë ½Ã¿¡´Â Å¬·¡½º Á¤ÀÇ ¾È¿¡ Æ÷ÇÔÇØ¾ß ÇÕ´Ï´Ù)
+// ìš”ì²­í•˜ì‹  í•¨ìˆ˜ë¥¼ ìˆ˜ì •í•œ ë²„ì „ì…ë‹ˆë‹¤.
+// (í´ë˜ìŠ¤ ë©¤ë²„ í•¨ìˆ˜ì´ë¯€ë¡œ, ì‹¤ì œ ì‚¬ìš© ì‹œì—ëŠ” í´ë˜ìŠ¤ ì •ì˜ ì•ˆì— í¬í•¨í•´ì•¼ í•©ë‹ˆë‹¤)
 float Terrain_Manager::Get_Height(float x, float z)
 {
-    // NUMVERTERTICES°¡ Å¬·¡½º ¸â¹ö º¯¼ö¶ó°í °¡Á¤ÇÕ´Ï´Ù.
+    // ë†’ì´ë§µì„ ëª» ì½ì—ˆìœ¼ë©´(íŒŒì¼ ë¶€ì¬ ë“±) ì•„ë˜ì—ì„œ ë¹ˆ vector ë¥¼ ì¸ë±ì‹±í•œë‹¤.
+    // Read_Map ì‹¤íŒ¨ëŠ” ì„œë²„ ê¸°ë™ì„ ë§‰ì§€ ì•Šìœ¼ë¯€ë¡œ ì—¬ê¸°ì„œ ê±¸ëŸ¬ì•¼ í•œë‹¤.
+    if (m_heightMap.empty())
+        return 0.f;
+
+    // NUMVERTERTICESê°€ í´ë˜ìŠ¤ ë©¤ë²„ ë³€ìˆ˜ë¼ê³  ê°€ì •í•©ë‹ˆë‹¤.
     float half = NUMVERTERTICES / 2.f;
 
     int LX = static_cast<int>(x + half);
     int DZ = static_cast<int>(z + half);
 
-    if (x < -half || z < -half || x > half || z > half)
+    // ì•„ë˜ì—ì„œ (LX + 1, DZ + 1) ê¹Œì§€ ì½ìœ¼ë¯€ë¡œ ë§ˆì§€ë§‰ ì¹¸ì€ ì œì™¸í•´ì•¼ í•œë‹¤.
+    // ì˜ˆì „ ì¡°ê±´(x > half)ì€ x = 2047.9 ë¥¼ í†µê³¼ì‹œì¼°ê³ , ê·¸ëŸ¬ë©´ LX + 1 ì´ 4096 ì´ ë˜ì–´
+    // ë°°ì—´ ë°–ì„ ì½ì—ˆë‹¤. ë§µ ê°€ì¥ìë¦¬ì—ì„œë§Œ ë‚˜ë˜ ë¬¸ì œë¼ ëˆˆì— ì•ˆ ë„ì—ˆë‹¤.
+    if (LX < 0 || DZ < 0 || LX >= m_width - 1 || DZ >= m_height - 1)
         return 0.f;
 
-    // _vector ¹è¿­À» Vector4 ¹è¿­·Î º¯°æ
+    // _vector ë°°ì—´ì„ Vector4 ë°°ì—´ë¡œ ë³€ê²½
     Vector4 Positions[4];
 
-    // XMVectorSetÀ» ±¸Á¶Ã¼ ÃÊ±âÈ­·Î º¯°æ
+    // XMVectorSetì„ êµ¬ì¡°ì²´ ì´ˆê¸°í™”ë¡œ ë³€ê²½
     Positions[0] = { LX - half,       m_heightMap[(DZ + 1) * NUMVERTERTICES + LX],     DZ + 1 - half, 1.f };
     Positions[1] = { LX + 1 - half,   m_heightMap[(DZ + 1) * NUMVERTERTICES + LX + 1], DZ + 1 - half, 1.f };
     Positions[2] = { LX + 1 - half,   m_heightMap[DZ * NUMVERTERTICES + LX + 1],       DZ - half,     1.f };
@@ -117,17 +166,17 @@ float Terrain_Manager::Get_Height(float x, float z)
     float DeltaX = x - (LX - half);
     float DeltaZ = z - (DZ - half);
 
-    // _vector¸¦ Vector4·Î º¯°æ
+    // _vectorë¥¼ Vector4ë¡œ ë³€ê²½
     Vector4 PlaneNormal;
 
-    // Á÷Á¢ ±¸ÇöÇÑ PlaneFromPoints ÇÔ¼ö¸¦ È£Ãâ
+    // ì§ì ‘ êµ¬í˜„í•œ PlaneFromPoints í•¨ìˆ˜ë¥¼ í˜¸ì¶œ
     if (DeltaX + DeltaZ <= 1.0f)
         PlaneNormal = PlaneFromPoints(Positions[0], Positions[2], Positions[3]);
     else
         PlaneNormal = PlaneFromPoints(Positions[0], Positions[1], Positions[2]);
 
-    // XMVectorGetX/Y/Z/W¸¦ ±¸Á¶Ã¼ ¸â¹ö Á¢±ÙÀ¸·Î º¯°æ
-    // Æò¸é ¹æÁ¤½Ä(Ax + By + Cz + D = 0)À» y¿¡ ´ëÇØ Á¤¸®: y = -(Ax + Cz + D) / B
+    // XMVectorGetX/Y/Z/Wë¥¼ êµ¬ì¡°ì²´ ë©¤ë²„ ì ‘ê·¼ìœ¼ë¡œ ë³€ê²½
+    // í‰ë©´ ë°©ì •ì‹(Ax + By + Cz + D = 0)ì„ yì— ëŒ€í•´ ì •ë¦¬: y = -(Ax + Cz + D) / B
     float B = PlaneNormal.y;
 
     return -(PlaneNormal.x * x + PlaneNormal.z * z + PlaneNormal.w) / B;

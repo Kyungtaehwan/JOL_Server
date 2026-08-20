@@ -1,8 +1,8 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "Room.h"
 #include "Player.h"
-#include "ClientSession.h"
-#include "ServerPacketHandler.h"
+#include "Session.h"
+#include "Packet_Handler.h"
 #include "AbstractFactory.h"
 #include "Tank.h"
 #include "Normal_Potan.h"
@@ -12,8 +12,11 @@
 #include "Collision_Manager.h"
 #include "Drone.h"
 #include "AirDrop_Bomb.h"
+#include "RoomJobPool.h"
 
-Room::Room() 
+/* GetNowMs() ëŠ” ServerConfig.h ì— ìˆë‹¤(Tank ì˜ ê²€ì¦ ìƒíƒœì™€ ê°™ì€ ì‹œê³„ë¥¼ ì¨ì•¼ í•œë‹¤). */
+
+Room::Room()
 {
 	SetMaxPlayer(8);
 	isActive = false;
@@ -35,7 +38,6 @@ void Room::Initialize()
 
 void Room::Update(float deltaTime)
 {
-	system("cls");
 
 	switch (CurState) {
 
@@ -50,12 +52,23 @@ void Room::Update(float deltaTime)
 		break;
 	case ROOM_INGAME:
 	{
+		/*  ìŠ¹íŒ¨ê°€ ê°ˆë¦° ë’¤ 3ì´ˆ ë’¤ ë°©ì„ ë˜ëŒë¦°ë‹¤. */
+		if (isGameEnded)
+		{
+			// ëë‚œ íŒì˜ ë¬¼ë¦¬ì™€ ì¶©ëŒì€ ë” ëŒë¦¬ì§€ ì•ŠëŠ”ë‹¤.
+			_resetTimer += deltaTime;
+			if (_resetTimer >= ROOM_RESET_DELAY)
+				ResetRoom();
+
+			break;
+		}
+
 		Room_ObjectManager.Update(deltaTime);
-		
+
 		UpdateCaptureGauge(deltaTime);
 		Detect_Bullet_Tank_Collisions();
 		Detect_Bullet_Terrain_Collisions();
-		
+
 		Detect_Bomb_Terrain_Collisions();
 		Detect_Bomb_Tank_Collisions();
 
@@ -65,6 +78,23 @@ void Room::Update(float deltaTime)
 		break;
 	}
 
+	// ë””ë²„ê·¸ ì½˜ì†”ì´ ë³¼ ê°’
+	UpdateInfoForDisplay();
+}
+
+// ----------------------------------------------------------------
+//  ë°© ì•ˆì˜ ê°’ì„ _display ì›ìê°’ìœ¼ë¡œ ì˜®ê¸´ë‹¤.
+// ----------------------------------------------------------------
+void Room::UpdateInfoForDisplay()
+{
+	_displayBlueGauge.store(static_cast<int>(blueGauge));
+	_displayRedGauge.store(static_cast<int>(redGauge));
+
+	int tankCount = 0;
+	if (auto tankList = Room_ObjectManager.Get_List(OBJ_TANK))
+		tankCount = static_cast<int>(tankList->size());
+
+	_displayTankCount.store(tankCount);
 }
 
 void Room::LateUpdate()
@@ -75,56 +105,6 @@ void Room::LateUpdate()
 		Room_ObjectManager.Late_Update();
 		Broadcast_All_TankStates();
 		Broadcast_All_DroneState();
-
-		auto now = std::chrono::steady_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - _gameStartTime).count();
-
-		std::cout << "[°ÔÀÓ °æ°ú ½Ã°£] " << elapsed << "ÃÊ °æ°úµÊ" << std::endl;
-		// ¸Å ÇÁ·¹ÀÓ ÅÊÅ© ÁÂÇ¥ Ãâ·Â
-		auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
-		if (tankList)
-		{
-			std::cout << "---- ÇöÀç ÇÁ·¹ÀÓ ÅÊÅ© À§Ä¡ ----" << std::endl;
-			for (size_t i = 0; i < tankList->size(); ++i)
-			{
-				Tank* tank = dynamic_cast<Tank*>((*tankList)[i]);
-				if (!tank) continue;
-
-				//const Matrix4x4& mat = tank->GetTankState().TankTransform;
-				Tank_INFO info = tank->GetTankState();
-				std::cout << "ÅÊÅ© ÀÎµ¦½º: " << i
-					<< " | X: " << info.TankTransform.m[3][0]
-					<< " | Y: " << info.TankTransform.m[3][1]
-					<< " | Z: " << info.TankTransform.m[3][2]
-					<< " | Æ÷Å¾ °¢µµ: " << info.PotapAngle
-					<< " | Æ÷½Å °¢µµ: " << info.PosinAngle
-					<<info.TankHP <<std::endl;
-				
-			}
-
-
-		}
-
-		auto droneList = Room_ObjectManager.Get_List(OBJ_DRONE);
-		if (droneList)
-		{
-			std::cout << "---- ÇöÀç ÇÁ·¹ÀÓ µå·Ğ À§Ä¡ ----" << std::endl;
-			for (size_t i = 0; i < droneList->size(); ++i)
-			{
-				Drone* drone = dynamic_cast<Drone*>((*droneList)[i]);
-				if (!drone) continue;
-
-				Drone_INFO dInfo = drone->GetDroneState();
-				std::cout << "µå·Ğ ÀÎµ¦½º: " << i
-					<< " | X: " << dInfo.DroneTransform.X
-					<< " | Y: " << dInfo.DroneTransform.Y
-					<< " | Z: " << dInfo.DroneTransform.Z
-					<< " | Yaw: " << dInfo.Yaw
-					<< " | Roll: " << dInfo.Roll
-					<< " | Pitch: " << dInfo.Pitch
-					<< std::endl;
-			}
-		}
 	}
 }
 
@@ -133,15 +113,59 @@ void Room::Release()
 
 }
 
+// ================================================================
+//  í‹± ì¡
+// ================================================================
+
+// ì‹¤í–‰ê¶Œì„ ì¡ì•˜ì§€ë§Œ ì—¬ê¸°ì„œ ëŒì§€ ì•ŠëŠ”ë‹¤. ë°© ì¡ í’€ì— ë„˜ê¸´ë‹¤.
+void Room::OnReadyToRun()
+{
+	CRoomJobPool::Get_Instance()->AddReadyRoom(this);
+}
+
+void Room::PushTickJob()
+{
+	/*  ì´ì „ í‹±ì´ ì•„ì§ íì— ë‚¨ì•„ ìˆìœ¼ë©´ ê±´ë„ˆë›´ë‹¤  */
+	if (_tickPending.exchange(true))
+		return;
+
+	Room* pRoom = this;
+	PushJob([pRoom]() { pRoom->TickJob(); });
+}
+
+void Room::TickJob()
+{
+
+	/*   ì´ í‹±ì„ ë„ëŠ” ë™ì•ˆ ë‹¤ìŒ í‹±ì´ ì˜ˆì•½ë  ìˆ˜ ìˆì–´ì•¼ í‹± ì£¼ê¸°ê°€ ìœ ì§€.  */
+	_tickPending.store(false);
+
+	const int64 nowMs  = GetNowMs();
+	int64       lastMs = _lastTickMs.exchange(nowMs);
+
+	if (lastMs == 0)
+		lastMs = nowMs;     // ì´ ë°©ì˜ ì²« í‹±
+
+	float deltaTime = static_cast<float>(nowMs - lastMs) / 1000.f;
+
+	/*  ë°©ì´ ì˜¤ë˜ ë†€ë‹¤ ê¹¨ì–´ë‚˜ë©´ dt ê°€ ëª‡ ì´ˆì§œë¦¬ë¡œ ë“¤ì–´ì˜¨ë‹¤.
+	    ê·¸ëŒ€ë¡œ ë„£ìœ¼ë©´ ì´ì•Œì´ í•œ í”„ë ˆì„ì— ë§µì„ ê´€í†µí•˜ê³  ì ë ¹ ê²Œì´ì§€ê°€ íŠ„ë‹¤.  */
+	if (deltaTime > 0.25f)
+		deltaTime = 0.25f;
+	if (deltaTime < 0.f)
+		deltaTime = 0.f;
+
+	Update(deltaTime);
+	LateUpdate();
+}
+
 #pragma region ForReady
 
 void Room::Accept_Player(PlayerRef Player)
 {
 	
-	WRITE_LOCK;
 	_Players[Player->playerID] = Player;
 
-	// ÇöÀç ÆÀº° ÀÎ¿ø ¼ö °è»ê
+	// í˜„ì¬ íŒ€ë³„ ì¸ì› ìˆ˜ ê³„ì‚°
 	int blueCount = 0;
 	int redCount = 0;
 
@@ -153,26 +177,26 @@ void Room::Accept_Player(PlayerRef Player)
 			redCount++;
 	}
 
-	// ¹èÁ¤ÇÒ ÆÀ °áÁ¤
+	// ë°°ì •í•  íŒ€ ê²°ì •
 	bool assignedTeam = false; // false == Red, true == Blue
 	if (_Player_States.empty())
 	{
-		// Ã¹ ÀÔÀåÀÚ´Â ¹«Á¶°Ç Blue
+		// ì²« ì…ì¥ìëŠ” ë¬´ì¡°ê±´ Blue
 		assignedTeam = true;
 	}
 	else
 	{
-		assignedTeam = (blueCount <= redCount); // ÀÎ¿øÀÌ ÀûÀº ÂÊ
+		assignedTeam = (blueCount <= redCount); // ì¸ì›ì´ ì ì€ ìª½
 	}
 
-	// Æ÷Áö¼Ç ÈÄº¸±º »ı¼º
+	// í¬ì§€ì…˜ í›„ë³´êµ° ìƒì„±
 	std::vector<uint8> usedPositions;
 	for (const auto& pair : _Player_States)
 		usedPositions.push_back(pair.second.Position);
 
 	uint8 assignedPosition = 0;
 
-	if (assignedTeam) // BLUE ÆÀ: 1 ~ 8
+	if (assignedTeam) // BLUE íŒ€: 1 ~ 8
 	{
 		for (uint8 pos = 1; pos <= 8; ++pos)
 		{
@@ -183,7 +207,7 @@ void Room::Accept_Player(PlayerRef Player)
 			}
 		}
 	}
-	else // RED ÆÀ: 9 ~ 16
+	else // RED íŒ€: 9 ~ 16
 	{
 		for (uint8 pos = 9; pos <= 16; ++pos)
 		{
@@ -195,66 +219,64 @@ void Room::Accept_Player(PlayerRef Player)
 		}
 	}
 
-	// ÃÖÁ¾ µ¥ÀÌÅÍ ±¸¼º ¹× ÀúÀå
+	// ìµœì¢… ë°ì´í„° êµ¬ì„± ë° ì €ì¥
 	Room_Ready_Data playerData;
-	playerData.PlayerID = static_cast<uint8>(Player->playerID);  // uint64 ¡æ uint8 Ä³½ºÆÃ ÁÖÀÇ
+	playerData.PlayerID = static_cast<uint8>(Player->playerID);  // uint64 â†’ uint8 ìºìŠ¤íŒ… ì£¼ì˜
 	playerData.Team = assignedTeam;
 	playerData.Position = assignedPosition;
 	playerData.IsReady = false;
 
 	_Player_States[Player->playerID] = playerData;
-	++RoomCurPlayerCnt;
+
 }
 
 void Room::Leave_Player(PlayerRef Player)
 {
-	WRITE_LOCK;
 
 	const uint64 playerID = Player->playerID;
 
-	// 1. ÇÃ·¹ÀÌ¾î ¸ñ·Ï¿¡¼­ Á¦°Å
+	// 1. í”Œë ˆì´ì–´ ëª©ë¡ì—ì„œ ì œê±°
 	auto playerIt = _Players.find(playerID);
 	if (playerIt != _Players.end())
 		_Players.erase(playerIt);
 
-	// 2. »óÅÂ µ¥ÀÌÅÍ¿¡¼­ Á¦°Å
+	// 2. ìƒíƒœ ë°ì´í„°ì—ì„œ ì œê±°
 	auto stateIt = _Player_States.find(playerID);
 	if (stateIt != _Player_States.end())
 		_Player_States.erase(stateIt);
 
-	// 3. ÇöÀç ÀÎ¿ø ¼ö °¨¼Ò
-	if (RoomCurPlayerCnt > 0)
-		--RoomCurPlayerCnt;
+	/*  ì¸ì› ì¹´ìš´í„°ëŠ” ì—¬ê¸°ì„œ ë‚´ë¦¬ì§€ ì•ŠëŠ”ë‹¤.
+	    Room_Manager::Client_LeaveRoom ì´ ë½ ì•ˆì—ì„œ ReturnPlayerSlot() ìœ¼ë¡œ
+	    ì´ë¯¸ ë‚´ë ¸ë‹¤. ê·¸ë˜ì•¼ "ì§€ê¸ˆ ì´ ë°©ì— ìë¦¬ê°€ ìˆë‚˜" íŒë‹¨ì´ ì¦‰ì‹œ ì •í™•í•´ì§„ë‹¤
+	    (ì´ ì¡ì´ ì‹¤í–‰ë  ë•Œê¹Œì§€ ê¸°ë‹¤ë¦¬ë©´ ë‚˜ê°„ ì‚¬ëŒì´ ìë¦¬ë¥¼ ê³„ì† ì°¨ì§€í•œë‹¤). */
 
-	// 4. ÇÃ·¹ÀÌ¾î°¡ ¸ğµÎ ³ª°£ °æ¿ì ¡æ ·ë ºñÈ°¼ºÈ­
-
+	Player->OwenerSession.reset();
 }
 
 bool Room::Change_Player_Info(uint64 playerID, const Room_Ready_Data& newData)
 {
-	WRITE_LOCK;
 
-	// ÇÃ·¹ÀÌ¾î°¡ Á¸ÀçÇÏ´ÂÁö ¸ÕÀú È®ÀÎ
+	// í”Œë ˆì´ì–´ê°€ ì¡´ì¬í•˜ëŠ”ì§€ ë¨¼ì € í™•ì¸
 	auto it = _Player_States.find(playerID);
 	if (it == _Player_States.end())
 		return false;
 
-	// ¿äÃ»µÈ Æ÷Áö¼ÇÀÌ ÀÌ¹Ì ´Ù¸¥ »ç¶÷ÀÌ ¾²°í ÀÖ´ÂÁö È®ÀÎ
+	// ìš”ì²­ëœ í¬ì§€ì…˜ì´ ì´ë¯¸ ë‹¤ë¥¸ ì‚¬ëŒì´ ì“°ê³  ìˆëŠ”ì§€ í™•ì¸
 	for (const auto& pair : _Player_States)
 	{
-		if (pair.first == playerID) continue; // º»ÀÎ Á¦¿Ü
+		if (pair.first == playerID) continue; // ë³¸ì¸ ì œì™¸
 
 		if (pair.second.Position == newData.Position)
-			return false; // Æ÷Áö¼Ç Ãæµ¹
+			return false; // í¬ì§€ì…˜ ì¶©ëŒ
 	}
 
-	// À¯È¿ÇÏ´Ù¸é µ¥ÀÌÅÍ °»½Å
+	// ìœ íš¨í•˜ë‹¤ë©´ ë°ì´í„° ê°±ì‹ 
 	Room_Ready_Data updated = newData;
-	updated.PlayerID = static_cast<uint8>(playerID); // ID º¸Á¸
+	updated.PlayerID = static_cast<uint8>(playerID); // ID ë³´ì¡´
 
 	_Player_States[playerID] = updated;
 
-	// º¯°æ »çÇ× ÀüÃ¼ ÀüÆÄ
+	// ë³€ê²½ ì‚¬í•­ ì „ì²´ ì „íŒŒ
 	//BroadCast_LobbyInfo();
 
 	return true;
@@ -262,17 +284,16 @@ bool Room::Change_Player_Info(uint64 playerID, const Room_Ready_Data& newData)
 
 bool Room::Ready_Player(uint64 playerID)
 {
-	WRITE_LOCK;
 
 	auto it = _Player_States.find(playerID);
 	if (it == _Player_States.end())
 		return false;
 
-	// ÀÌ¹Ì Ready »óÅÂ¶ó¸é false ¸®ÅÏ
+	// ì´ë¯¸ Ready ìƒíƒœë¼ë©´ false ë¦¬í„´
 	if (it->second.IsReady)
 		return false;
 
-	// Ready »óÅÂ·Î ¼³Á¤ ÈÄ true ¸®ÅÏ
+	// Ready ìƒíƒœë¡œ ì„¤ì • í›„ true ë¦¬í„´
 	it->second.IsReady = true;
 
 	return true;
@@ -280,29 +301,27 @@ bool Room::Ready_Player(uint64 playerID)
 
 void Room::Set_Player_Lobby_State(Room_Ready_Data data, uint64 PlayerID)
 {
-	WRITE_LOCK;
 	_Player_States[PlayerID] = data;
 
 }
 
 bool Room::Check_ClientLoading()
 {
-	READ_LOCK;
-	if (Wait_LoadingCnt >= RoomCurPlayerCnt) {
-		return true;
-	}
-	return false;
+
+	/* ì•„ë¬´ë„ ì—†ëŠ” ë°©ì€ ì ˆëŒ€ ì‹œì‘í•˜ì§€ ì•ŠëŠ”ë‹¤.  */
+	if (RoomCurPlayerCnt == 0)
+		return false;
+
+	return Wait_LoadingCnt >= RoomCurPlayerCnt;
 }
 
 void Room::Clinet_Loading_Finish()
 {
-	WRITE_LOCK;
 	Wait_LoadingCnt++;
 }
 
 bool Room::CanStartGame()
 {
-	READ_LOCK;
 
 	if (_Player_States.empty())
 		return false;
@@ -318,7 +337,6 @@ bool Room::CanStartGame()
 
 bool Room::StartGame()
 {
-	WRITE_LOCK;
 
 	if (CurState == ROOM_INGAME)
 		return false;
@@ -326,8 +344,33 @@ bool Room::StartGame()
 	CurState = ROOM_INGAME;
 	isStart = true;
 
+	/*  ê²½ê³¼ ì‹œê°„ì˜ ê¸°ì¤€ì   */
+	_displayGameStartMs.store(GetNowMs());
+
 	return true;
 
+}
+
+// ----------------------------------------------------------------
+//  ë¯¸ë¦¬ ì˜®ê²¨ ë‘” _display* ì›ìê°’ë§Œ ì½ëŠ”ë‹¤.
+// ----------------------------------------------------------------
+Room::FRoomLiveInfo Room::GetLiveInfo()
+{
+	FRoomLiveInfo info;
+
+	info.State     = CurState.load();
+	info.BlueGauge = _displayBlueGauge.load();
+	info.RedGauge  = _displayRedGauge.load();
+	info.TankCount = _displayTankCount.load();
+
+	if (info.State == ROOM_INGAME)
+	{
+		const int64 startMs = _displayGameStartMs.load();
+		if (startMs > 0)
+			info.ElapsedSec = static_cast<int>((GetNowMs() - startMs) / 1000);
+	}
+
+	return info;
 }
 
 void Room::BroadCast_LobbyInfo()
@@ -335,7 +378,6 @@ void Room::BroadCast_LobbyInfo()
 	std::vector<Room_Ready_Data> playerStates;
 	{
 
-	READ_LOCK;
 
 		for (const auto& pair : _Player_States)
 		{
@@ -347,7 +389,7 @@ void Room::BroadCast_LobbyInfo()
 		}
 	}
 
-	SendBufferRef sendBuffer = ServerPacketHandler::Make_S_ROOM_PLAYER_STATES(playerStates);
+	SendBufferRef sendBuffer = CPacket_Handler::Make_S_ROOM_PLAYER_STATES(playerStates);
 	Broadcast(sendBuffer);
 }
 
@@ -358,7 +400,7 @@ void Room::BroadCast_LobbyInfo()
 void Room::Broadcast_GameStart()
 {
 
-	SendBufferRef sendBuffer = ServerPacketHandler::Make_S_GAME_START(1);
+	SendBufferRef sendBuffer = CPacket_Handler::Make_S_GAME_START(1);
 	Broadcast(sendBuffer);
 }
 
@@ -370,7 +412,7 @@ void Room::ChangeRoomState(ROOM_STATE state)
 
 		StartGame();
 		SpawnTanks();
-		SendBufferRef sendBuffer = ServerPacketHandler::Make_S_ALL_PLAYER_LOADING_FINISH(1);
+		SendBufferRef sendBuffer = CPacket_Handler::Make_S_ALL_PLAYER_LOADING_FINISH(1);
 		Broadcast(sendBuffer);
 
 	}
@@ -385,7 +427,7 @@ void Room::SpawnTanks()
 {
 	std::map<int, std::vector<Room_Ready_Data>> tankMap;
 
-	// Æ÷Áö¼Ç ±â¹İÀ¸·Î ±×·ìÈ­ (Â¦¼ö: Æ÷Å¾, È¦¼ö: Á¶Á¾¼ö ¡æ Á¶Á¾¼ö ±âÁØ ±×·ìÇÎ)
+	// í¬ì§€ì…˜ ê¸°ë°˜ìœ¼ë¡œ ê·¸ë£¹í™”
 	for (const auto& pair : _Player_States)
 	{
 		const Room_Ready_Data& player = pair.second;
@@ -406,25 +448,25 @@ void Room::SpawnTanks()
 		float z = isBlue ? 50.f : 150.f;
 
 		Matrix4x4 tankMat = Matrix4x4::CreateTranslation(x, y, z);
-		Matrix4x4 droneMat = Matrix4x4::CreateTranslation(x, y + 50.f, z); // ÅÊÅ© À§·Î ¿ÀÇÁ¼Â
+		Matrix4x4 droneMat = Matrix4x4::CreateTranslation(x, y + 50.f, z); // íƒ±í¬ ìœ„ë¡œ ì˜¤í”„ì…‹
 
-		// ÅÊÅ© »ı¼º
+		// íƒ±í¬ ìƒì„±
 		{
 			GameObject* tankObj = CAbstractFactory<Tank>::Create();
 			Tank* tank = dynamic_cast<Tank*>(tankObj);
 			tank->SetBlueTeam(isBlue);
 
 			if (!passengers.empty())
-				tank->playerId = passengers[0].PlayerID; // ´ëÇ¥°ª
+				tank->playerId = passengers[0].PlayerID; // ëŒ€í‘œê°’
 
 			for (const auto& rider : passengers)
 				tank->AddPassenger(rider);
 
-			tank->SetTankState(tankMat, 0.f, 0.f); // ±âÁ¸ ½Ã±×´ÏÃ³ ±×´ë·Î »ç¿ë
+			tank->SetTankState(tankMat, 0.f, 0.f); // ê¸°ì¡´ ì‹œê·¸ë‹ˆì²˜ ê·¸ëŒ€ë¡œ ì‚¬ìš©
 			Room_ObjectManager.Add_Object(OBJ_TANK, tank);
 		}
 
-		// ¦¡¦¡ µå·Ğ »ı¼º(ÅÊÅ©¿Í µ¿ÀÏ ÀÎµ¦½º·Î 1:1 ¸ÅÄª) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+		// â”€â”€ ë“œë¡  ìƒì„±(íƒ±í¬ì™€ ë™ì¼ ì¸ë±ìŠ¤ë¡œ 1:1 ë§¤ì¹­) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 		{
 			GameObject* droneObj = CAbstractFactory<Drone>::Create();
 			Drone* drone = dynamic_cast<Drone*>(droneObj);
@@ -433,13 +475,10 @@ void Room::SpawnTanks()
 			for (const auto& rider : passengers)
 				drone->AddPassenger(rider);
 
-			// µå·Ğµµ ÅÊÅ©¿Í µ¿ÀÏÇÑ state ÇÔ¼ö°¡ ÀÖ´Ù°í ÇßÀ¸´Ï µ¿ÀÏÇÏ°Ô È£Ãâ
+			// ë“œë¡ ë„ íƒ±í¬ì™€ ë™ì¼í•œ state í•¨ìˆ˜ê°€ ìˆë‹¤ê³  í–ˆìœ¼ë‹ˆ ë™ì¼í•˜ê²Œ í˜¸ì¶œ
 			Vec3 Temp = { x, y + 50.f, z };
 			drone->SetDroneState(Temp,0,0,0);
 
-			// (¼±ÅÃ) »óÈ£ ÂüÁ¶ ¼¼ÆÃÀÌ ÀÖ´Ù¸é ÀÎµ¦½º ±³Â÷ ±â·Ï
-			// drone->SetOwnerTankIndex(tankIndex);
-			// ¶Ç´Â tank->SetDroneIndex(tankIndex);
 
 			Room_ObjectManager.Add_Object(OBJ_DRONE, drone);
 		}
@@ -450,10 +489,8 @@ void Room::SpawnTanks()
 
 void Room::Change_Tank_INFO(int64 pID, const Matrix4x4& mat, const float& PotapAngle ,const float& PosinAngle)
 {
-	WRITE_LOCK;
-	dynamic_cast<Tank*>((*Room_ObjectManager.Get_List(OBJ_TANK))
-		[pID])->SetTankState(mat, PotapAngle, PosinAngle);
-
+	if (Tank* pTank = GetTankAt(pID))
+		pTank->SetTankState(mat, PotapAngle, PosinAngle);
 }
 
 
@@ -461,9 +498,8 @@ void Room::Broadcast_All_TankStates()
 {
 	std::vector<Tank_INFO> tankStates;
 
-	// 1. ¸ğµç ÅÊÅ© »óÅÂ ¼öÁı
+	// 1. ëª¨ë“  íƒ±í¬ ìƒíƒœ ìˆ˜ì§‘
 	{
-		READ_LOCK;
 		auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
 		if (tankList)
 		{
@@ -479,10 +515,10 @@ void Room::Broadcast_All_TankStates()
 		}
 	}
 
-	// 2. ÆĞÅ¶ »ı¼º ¹× ¸ğµç ÇÃ·¹ÀÌ¾î¿¡°Ô Àü¼Û
+	// 2. íŒ¨í‚· ìƒì„± ë° ëª¨ë“  í”Œë ˆì´ì–´ì—ê²Œ ì „ì†¡
 	if (!tankStates.empty())
 	{
-		auto sendBuffer = ServerPacketHandler::Make_S_ALL_TANK_STATE(tankStates);
+		auto sendBuffer = CPacket_Handler::Make_S_ALL_TANK_STATE(tankStates);
 		Broadcast(sendBuffer);
 	}
 }
@@ -491,9 +527,8 @@ void Room::Broadcast_All_DroneState()
 {
 	std::vector<Drone_INFO> DroneStates;
 
-	// 1. ¸ğµç µå·Ğ »óÅÂ ¼öÁı
+	// 1. ëª¨ë“  ë“œë¡  ìƒíƒœ ìˆ˜ì§‘
 	{
-		READ_LOCK;
 		auto DroneList = Room_ObjectManager.Get_List(OBJ_DRONE);
 		if (DroneList)
 		{
@@ -509,39 +544,64 @@ void Room::Broadcast_All_DroneState()
 		}
 	}
 
-	// 2. ÆĞÅ¶ »ı¼º ¹× ¸ğµç ÇÃ·¹ÀÌ¾î¿¡°Ô Àü¼Û
+	// 2. íŒ¨í‚· ìƒì„± ë° ëª¨ë“  í”Œë ˆì´ì–´ì—ê²Œ ì „ì†¡
 	if (!DroneStates.empty())
 	{
-		auto sendBuffer = ServerPacketHandler::Make_S_ALL_DRONE_STATE(DroneStates);
+		auto sendBuffer = CPacket_Handler::Make_S_ALL_DRONE_STATE(DroneStates);
 		Broadcast(sendBuffer);
 	}
 }
 
 void Room::Broadcast_Hit_Weapon(Vec3 Pos)
 {
-	for (const auto& iter : _Players)
-	{
-		uint64 playerID = iter.first;
-		PlayerRef player = iter.second;
-
-		auto sendBuffer = ServerPacketHandler::Make_S_WEAPON_HIT(Pos.X, Pos.Y, Pos.Z);
-		player->OwenerSession->Send(sendBuffer);
-	}
+	// ì˜ˆì „ì—ëŠ” ì—¬ê¸°ì„œ _Players ë¥¼ ë½ ì—†ì´ ëŒë©´ì„œ, ìˆ˜ì‹ ìë§ˆë‹¤ ë˜‘ê°™ì€ íŒ¨í‚·ì„
+	// ìƒˆë¡œ ë§Œë“¤ê³  OwenerSession ì„ ê²€ì‚¬ë„ ì—†ì´ ì—­ì°¸ì¡°í–ˆë‹¤.
+	Broadcast(CPacket_Handler::Make_S_WEAPON_HIT(Pos.X, Pos.Y, Pos.Z));
 }
 
 
 #pragma endregion ForGamePlay
 
 
+// ----------------------------------------------------------------
+//  ë°© ì•ˆ ì „ì›ì—ê²Œ ê°™ì€ ë²„í¼ë¥¼ ë³´ë‚¸ë‹¤.
+// ----------------------------------------------------------------
 void Room::Broadcast(SendBufferRef sendBuffer)
 {
-	WRITE_LOCK;
+	if (!sendBuffer) return;
+
+	std::vector<SessionRef> targets = SnapshotSessions();
+
+	for (SessionRef& session : targets)
+		session->Send(sendBuffer);
+}
+
+// ë³´ë‚¼ ëŒ€ìƒ ì„¸ì…˜ë§Œ ë¨¼ì € ëª¨ì€ë‹¤(ë°© ì¡ ì•ˆì—ì„œ í˜¸ì¶œ).
+std::vector<SessionRef> Room::SnapshotSessions()
+{
+	std::vector<SessionRef> targets;
+
+	targets.reserve(_Players.size());
+
 	for (const auto& iter : _Players)
 	{
 		const PlayerRef& player = iter.second;
 		if (player && player->OwenerSession)
-			player->OwenerSession->Send(sendBuffer);
+			targets.push_back(player->OwenerSession);
 	}
+
+	return targets;
+}
+
+// íŠ¹ì • í”Œë ˆì´ì–´ì˜ ì„¸ì…˜ í•˜ë‚˜ë§Œ êº¼ë‚¸ë‹¤. ì—†ìœ¼ë©´ nullptr.
+SessionRef Room::FindSession(uint64 playerID)
+{
+
+	auto it = _Players.find(playerID);
+	if (it == _Players.end() || !it->second)
+		return nullptr;
+
+	return it->second->OwenerSession;
 }
 
 
@@ -551,10 +611,13 @@ void Room::Broadcast(SendBufferRef sendBuffer)
 void Room::ShowRoomData()
 {
 	std::cout << "======== ROOM INFO ========" << std::endl;
-	std::cout << "RoomID: " << (int)RoomID << " | Current Players: " << RoomCurPlayerCnt << " / " << RoomMaxPlayerCnt << std::endl;
+	/* uint8 ì„ ê·¸ëŒ€ë¡œ í˜ë¦¬ë©´ ìˆ«ìê°€ ì•„ë‹ˆë¼ ë¬¸ìë¡œ ì°íŒë‹¤. ì›ë˜ë„ ê·¸ë¬ë‹¤. */
+	std::cout << "RoomID: " << (int)RoomID
+		<< " | Current Players: " << (int)RoomCurPlayerCnt
+		<< " / " << (int)RoomMaxPlayerCnt << std::endl;
 	std::cout << "Active: " << (isActive ? "True" : "False") << " | State: ";
 
-	switch (CurState)
+	switch (CurState.load())
 	{
 	case ROOM_UNACTIVATE:
 		break;
@@ -597,14 +660,13 @@ void Room::ShowRoomData()
 
 void Room::ShowTankState(uint8 Id)
 {
-	READ_LOCK;
 	Tank_INFO Tank0state = GetTankState(Id);
-	std::cout << "Tank  "<<  Id  <<"  »óÅÂ" << std::endl;
-	std::cout << "X: " << Tank0state.TankTransform.m[3][0] << std::endl;  // _41
-	std::cout << "Y: " << Tank0state.TankTransform.m[3][1] << std::endl;  // _42
-	std::cout << "Z: " << Tank0state.TankTransform.m[3][2] << std::endl;  // _43
-	std::cout << "Æ÷Å¾ °¢µµ: " << Tank0state.PotapAngle << std::endl;
-	std::cout << "Æ÷½Å °¢µµ: " << Tank0state.PosinAngle << std::endl;
+	std::cout << "Tank  "<<  Id  <<"  ìƒíƒœ" << std::endl;
+	std::cout << "X: " << Tank0state.Pos.X << std::endl;
+	std::cout << "Y: " << Tank0state.Pos.Y << std::endl;
+	std::cout << "Z: " << Tank0state.Pos.Z << std::endl;
+	std::cout << "í¬íƒ‘ ê°ë„: " << Tank0state.PotapAngle << std::endl;
+	std::cout << "í¬ì‹  ê°ë„: " << Tank0state.PosinAngle << std::endl;
 	std::cout << "HP: " << static_cast<int>(Tank0state.TankHP) << std::endl;
 }
 
@@ -613,20 +675,18 @@ void Room::ShowBulletCnt()
 
 	int BulletCnt = 0;
 	if (Room_ObjectManager.Get_List(OBJ_WEAPON)) {
-		READ_LOCK;
 		BulletCnt = Room_ObjectManager.Get_List(OBJ_WEAPON)->size();
 	}
-	cout << "»ı¼ºµÈ ÃÑ¾Ë : " << BulletCnt << " °³" << endl;
+	cout << "ìƒì„±ëœ ì´ì•Œ : " << BulletCnt << " ê°œ" << endl;
 }
 
 bool Room::Wait_Full(uint16 MaxPlayer)
 {
-	READ_LOCK;
 	int playerCnt = (int)_Players.size();
 
-	std::cout << "ÇÃ·¹ÀÌ¾î Á¢¼Ó ´ë±â Áß" << std::endl;
-	std::cout << "Á¢¼Ó ÇÃ·¹ÀÌ¾î (" << playerCnt << ") ¸í" << std::endl;
-	std::cout << "ÃÖ´ë ÇÃ·¹ÀÌ¾î (" << MaxPlayer << ") ¸í" << std::endl;
+	std::cout << "í”Œë ˆì´ì–´ ì ‘ì† ëŒ€ê¸° ì¤‘" << std::endl;
+	std::cout << "ì ‘ì† í”Œë ˆì´ì–´ (" << playerCnt << ") ëª…" << std::endl;
+	std::cout << "ìµœëŒ€ í”Œë ˆì´ì–´ (" << MaxPlayer << ") ëª…" << std::endl;
 
 	
 	if (playerCnt >= MaxPlayer)
@@ -638,64 +698,197 @@ bool Room::Wait_Full(uint16 MaxPlayer)
 
 #pragma endregion ForDebug
 
+// ================================================================
+//  ì¸ë±ìŠ¤ë¡œ íƒ±í¬/ë“œë¡  êº¼ë‚´ê¸° (ë°© ì¡ ì•ˆì—ì„œ í˜¸ì¶œ)
+// ================================================================
+Tank* Room::GetTankAt(int64 index)
+{
+	auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
+	if (!tankList || index < 0 || index >= static_cast<int64>(tankList->size()))
+		return nullptr;
+
+	return dynamic_cast<Tank*>((*tankList)[index]);
+}
+
+Drone* Room::GetDroneAt(int64 index)
+{
+	auto droneList = Room_ObjectManager.Get_List(OBJ_DRONE);
+	if (!droneList || index < 0 || index >= static_cast<int64>(droneList->size()))
+		return nullptr;
+
+	return dynamic_cast<Drone*>((*droneList)[index]);
+}
+
+// ================================================================
+//  ì„œë²„ ê²€ì¦
+//
+//  í´ë¼ê°€ ë³´ë‚¸ ê°’ì„ ê·¸ëŒ€ë¡œ ì €ì¥í•˜ë˜ ìë¦¬ì— ì„¸ ê²¹ì˜ ê²€ì‚¬ë¥¼ ë„£ì—ˆë‹¤.
+//    ê±°ë¶€í•˜ë©´ ê·¸ëƒ¥ ë¬´ì‹œí•œë‹¤
+// ================================================================
+bool Room::IsMoveAllowed(Tank* pTank, const Vec3& pos, int64 nowMs)
+{
+	if (pTank == nullptr)
+		return false;
+
+	/*  1) ì›”ë“œ ê²½ê³„.  */
+	if (pos.X < -WORLD_LIMIT_XZ || pos.X > WORLD_LIMIT_XZ ||
+		pos.Z < -WORLD_LIMIT_XZ || pos.Z > WORLD_LIMIT_XZ)
+	{
+		_rejectWorld.fetch_add(1);
+		return false;
+	}
+
+	// 2) ì§€í˜• ë†’ì´. ì§€í•˜ ì´ë™ê³¼ ë¹„í–‰ì„ ë§‰ëŠ”ë‹¤.
+	const float terrainH = Terrain_Manager::GetInstance().Get_Height(pos.X, pos.Z);
+	if (pos.Y < terrainH - TERRAIN_ALLOW_BELOW ||
+		pos.Y > terrainH + TERRAIN_ALLOW_ABOVE)
+	{
+		_rejectTerrain.fetch_add(1);
+		return false;
+	}
+
+	// 3) ì´ë™ ì†ë„. í…”ë ˆí¬íŠ¸ì™€ ì†ë„í•µì„ ë§‰ëŠ”ë‹¤.
+	if (!pTank->CheckMoveSpeed(pos, nowMs))
+	{
+		_rejectSpeed.fetch_add(1);
+		return false;
+	}
+
+	return true;
+}
+
+Room::FRejectCounters Room::GetRejectCount() const
+{
+	FRejectCounters c;
+	c.Shot    = _rejectShot.load();
+	c.Respawn = _rejectRespawn.load();
+	c.World   = _rejectWorld.load();
+	c.Terrain = _rejectTerrain.load();
+	c.Speed   = _rejectSpeed.load();
+	return c;
+}
+
 void Room::SetTankState(int64 index, const Matrix4x4& mat, const float& PotapAngle, const float& PosinAngle)
 {
-	WRITE_LOCK;
-	dynamic_cast<Tank*>((*Room_ObjectManager.Get_List(OBJ_TANK))[index])->SetTankState(mat, PotapAngle, PosinAngle);
-
+	if (Tank* pTank = GetTankAt(index))
+		pTank->SetTankState(mat, PotapAngle, PosinAngle);
 }
 
 void Room::SetTankPosin(int64 index, const float& PotapAngle, const float& PosinAngle) {
-	WRITE_LOCK;
-	dynamic_cast<Tank*>((*Room_ObjectManager.Get_List(OBJ_TANK))[index])->SetTankOnlyPosin(PosinAngle, PotapAngle);
+	if (Tank* pTank = GetTankAt(index))
+		pTank->SetTankOnlyPosin(PosinAngle, PotapAngle);
 }
 
 void Room::SetTankPos(int64 index, const Matrix4x4& mat) {
 
-	WRITE_LOCK;
-	dynamic_cast<Tank*>((*Room_ObjectManager.Get_List(OBJ_TANK))[index])->SetTankOnlyPos(mat);
+	if (Tank* pTank = GetTankAt(index))
+		pTank->SetTankOnlyPos(mat);
+}
+
+/* --- ìœ„ ì„¸ ê°œì˜ ì¿¼í„°ë‹ˆì–¸. í´ë¼ê°€ ì‹¤ì œë¡œ ì“°ëŠ” ê²½ë¡œ. --- */
+
+void Room::SetTankStateQuat(int64 index, const Vec3& pos, const Quat& rot,
+							const float& PotapAngle, const float& PosinAngle,
+							const int8* pWheelSag)
+{
+	Tank* pTank = GetTankAt(index);
+	if (!pTank)
+		return;
+
+	const int64 nowMs = GetNowMs();
+
+	/*  ìœ„ì¹˜ê°€ ê±°ë¶€ë˜ë©´ í¬íƒ‘/í¬ì‹ ë„ ê°™ì´ ë²„ë¦¬ì§€ ì•ŠëŠ”ë‹¤.
+	    í¬íƒ‘ì€ í¬ìˆ˜ê°€ ë³´ë‚´ëŠ” ê°’ì´ë¼ ì´ë™ ì¹˜íŠ¸ì™€ ë¬´ê´€í•˜ë‹¤.  */
+	if (IsMoveAllowed(pTank, pos, nowMs))
+		pTank->SetTankStateQuat(pos, rot, PosinAngle, PotapAngle, pWheelSag);
+	else
+		pTank->SetTankOnlyPosin(PosinAngle, PotapAngle);
+}
+
+void Room::SetTankPosQuat(int64 index, const Vec3& pos, const Quat& rot, const int8* pWheelSag)
+{
+	Tank* pTank = GetTankAt(index);
+	if (!pTank)
+		return;
+
+	if (IsMoveAllowed(pTank, pos, GetNowMs()))
+		pTank->SetTankOnlyPosQuat(pos, rot, pWheelSag);
 }
 
 void Room::SetDroneState(int64 DroneIndex, const Vec3 Pos, float Yaw, float Roll, float Pitch)
 {
-
-	WRITE_LOCK;
-	dynamic_cast<Drone*>((*Room_ObjectManager.Get_List(OBJ_DRONE))[DroneIndex])->SetDroneState(Pos, Yaw, Roll, Pitch);
+	if (Drone* pDrone = GetDroneAt(DroneIndex))
+		pDrone->SetDroneState(Pos, Yaw, Roll, Pitch);
 }
 
 void Room::SetDroneRespawn(int64 index, const Matrix4x4& mat)
 {
-	WRITE_LOCK;
-	dynamic_cast<Drone*>((*Room_ObjectManager.Get_List(OBJ_DRONE))[index])->SetSpawn(mat);
+	if (Drone* pDrone = GetDroneAt(index))
+		pDrone->SetSpawn(mat);
 }
 
 void Room::SetTankRespawn(int64 index, const Matrix4x4& mat, const float& PotapAngle, const float& PosinAngle)
 {
-	WRITE_LOCK;
-	dynamic_cast<Tank*>((*Room_ObjectManager.Get_List(OBJ_TANK))[index])->SetSpawn(mat, PotapAngle,PosinAngle);
+	Tank* pTank = GetTankAt(index);
+	if (!pTank)
+		return;
+
+	/*  ë¦¬ìŠ¤í° ëŒ€ê¸°(5ì´ˆ)  */
+	if (pTank->isSpawned())
+	{
+		_rejectRespawn.fetch_add(1);
+		return;     // ì‚´ì•„ ìˆëŠ”ë° ë¶€í™œ ìš”ì²­ - ë¬´ì‹œ
+	}
+
+	const int64 nowMs = GetNowMs();
+	if (nowMs - pTank->GetDeadTimeMs() < RESPAWN_COOLDOWN_MS - COOLDOWN_TOLERANCE_MS)
+	{
+		_rejectRespawn.fetch_add(1);
+		return;
+	}
+
+	pTank->SetSpawn(mat, PotapAngle, PosinAngle);
 }
 
 Tank_INFO Room::GetTankState(int64 index)
 {
-	READ_LOCK;
-	return dynamic_cast<Tank*>((*Room_ObjectManager.Get_List(OBJ_TANK))[index])->GetTankState();
 
+	if (Tank* pTank = GetTankAt(index))
+		return pTank->GetTankState();
+
+	return Tank_INFO{};
 }
 
 void Room::CreateBullet(int8 pID, uint8 tankindex,WEAPON_ID ID, Vec3 Dir, Vec3 Pos)
 {
-	WRITE_LOCK;
 
 	switch (ID) {
 
 	case WEAPON_NPOTAN:
 	{
-		bool isBlueTeam = dynamic_cast<Tank*>((*Room_ObjectManager.Get_List(OBJ_TANK))[tankindex])->isBlueTeam();
+		Tank* pShooter = GetTankAt(tankindex);
+		if (!pShooter)
+			return;  
+
+		/*  ì¬ì¥ì „  */
+		const int64 nowMs = GetNowMs();
+		if (nowMs - pShooter->GetLastShotMs() < SHOT_COOLDOWN_MS - COOLDOWN_TOLERANCE_MS)
+		{
+			_rejectShot.fetch_add(1);
+			return;
+		}
+		pShooter->SetLastShotTime(nowMs);
+
+		// ì£½ì€ íƒ±í¬
+		if (!pShooter->isSpawned())
+			return;
+
+		bool isBlueTeam = pShooter->isBlueTeam();
 		GameObject* TempBullet = CAbstractFactory<Normal_Potan>::Create();
 		dynamic_cast<Normal_Potan*>(TempBullet)->SetInitData(Dir, Pos, tankindex ,pID, isBlueTeam);
 		Room_ObjectManager.Add_Object(OBJ_WEAPON, TempBullet);
 
-		auto sendBuffer = ServerPacketHandler::Make_S_BULLETADD(tankindex, Dir.X, Dir.Y, Dir.Z, Pos.X,Pos.Y,Pos.Z);
+		auto sendBuffer = CPacket_Handler::Make_S_BULLETADD(tankindex, Dir.X, Dir.Y, Dir.Z, Pos.X,Pos.Y,Pos.Z);
 		Broadcast(sendBuffer);
 
 	}
@@ -713,15 +906,14 @@ void Room::CreateBullet(int8 pID, uint8 tankindex,WEAPON_ID ID, Vec3 Dir, Vec3 P
 
 void Room::CreateBomb(uint8 playerID, uint8 TankIndex, uint8 AreaNum)
 {
-	WRITE_LOCK;
 
 	if (AreaNum < 1 || AreaNum > 9) return;
 
-	// Àü¿ª X ¹üÀ§(·¥ÇÎ ±âÁØ)
+	// ì „ì—­ X ë²”ìœ„(ë¨í•‘ ê¸°ì¤€)
 	constexpr float WORLD_MIN_X = -500.f;
 	constexpr float WORLD_MAX_X = 500.f;
 
-	// Area °æ°è
+	// Area ê²½ê³„
 	float minX, maxX, minZ, maxZ;
 	switch (AreaNum)
 	{
@@ -739,29 +931,29 @@ void Room::CreateBomb(uint8 playerID, uint8 TankIndex, uint8 AreaNum)
 	default: return;
 	}
 
-	// ¹èÄ¡ ÆÄ¶ó¹ÌÅÍ
-	constexpr int   bombsPerLine = 6;   // ÁÙ´ç 6°³ ¡æ ÃÑ 12°³
+	// ë°°ì¹˜ íŒŒë¼ë¯¸í„°
+	constexpr int   bombsPerLine = 6;   // ì¤„ë‹¹ 6ê°œ
 	constexpr float PAD = 10.f;
-	constexpr float Z_OFFSET = 40.f; // µÎ ÁÙ °£°İ
-	constexpr float BASE_ALT = 200.f; // ¼¼°è ÁÂÃø ³¡¿¡¼­ÀÇ ±âº» °íµµ
-	constexpr float RAMP_ALT = 100.f; // ¼¼°è ¿ìÃø ³¡¿¡¼­ Ãß°¡µÇ´Â °íµµ
-	const bool leftToRight = true;       // ºñÇà ¹æÇâ(ÁÂ¡æ¿ì). ¹İ´ë¸é false
+	constexpr float Z_OFFSET = 40.f; // ë‘ ì¤„ ê°„ê²©
+	constexpr float BASE_ALT = 200.f; // ì„¸ê³„ ì¢Œì¸¡ ëì—ì„œì˜ ê¸°ë³¸ ê³ ë„
+	constexpr float RAMP_ALT = 100.f; // ì„¸ê³„ ìš°ì¸¡ ëì—ì„œ ì¶”ê°€ë˜ëŠ” ê³ ë„
+	const bool leftToRight = true;       // ë¹„í–‰ ë°©í–¥(ì¢Œâ†’ìš°). ë°˜ëŒ€ë©´ false
 
 	const float leftX = minX + PAD;
 	const float rightX = maxX - PAD;
 	const float centerZ = (minZ + maxZ) * 0.5f;
 
-	for (int line = 0; line < 2; ++line) // 0: À­ÁÙ, 1: ¾Æ·§ÁÙ
+	for (int line = 0; line < 2; ++line) // 0: ìœ—ì¤„, 1: ì•„ë«ì¤„
 	{
 		const float zLine = centerZ + (line == 0 ? -Z_OFFSET : Z_OFFSET);
 
 		for (int i = 0; i < bombsPerLine; ++i)
 		{
-			// Area ³»ºÎ¿¡¼­ X µîºĞ(°íÁ¤ À§Ä¡)
+			// Area ë‚´ë¶€ì—ì„œ X ë“±ë¶„(ê³ ì • ìœ„ì¹˜)
 			const float tLocal = (bombsPerLine == 1) ? 0.f : float(i) / float(bombsPerLine - 1);
 			const float x = leftX + (rightX - leftX) * tLocal;
 
-			// Àü¿ª X ±âÁØ °íµµ ·¥ÇÎ(ÁöÇü ¹«½Ã)
+			// ì „ì—­ X ê¸°ì¤€ ê³ ë„ ë¨í•‘(ì§€í˜• ë¬´ì‹œ)
 			float tGlobal = (x - WORLD_MIN_X) / (WORLD_MAX_X - WORLD_MIN_X); // 01
 			tGlobal = std::clamp(tGlobal, 0.f, 1.f);
 			if (!leftToRight) tGlobal = 1.f - tGlobal;
@@ -774,11 +966,11 @@ void Room::CreateBomb(uint8 playerID, uint8 TankIndex, uint8 AreaNum)
 			if (auto* bomb = dynamic_cast<AirDrop_Bomb*>(obj))
 				bomb->SetInitData(playerID, TankIndex, pos);
 
-			Room_ObjectManager.Add_Object(OBJ_BOMB, obj); // ÇÊ¿ä½Ã Ä«Å×°í¸® Á¶Á¤
+			Room_ObjectManager.Add_Object(OBJ_BOMB, obj); // í•„ìš”ì‹œ ì¹´í…Œê³ ë¦¬ ì¡°ì •
 		}
 	}
 
-	auto sendBuffer = ServerPacketHandler::Make_S_AIRDROP(AreaNum);
+	auto sendBuffer = CPacket_Handler::Make_S_AIRDROP(AreaNum);
 	Broadcast(sendBuffer);
 
 }
@@ -801,7 +993,10 @@ void Room::Detect_Bullet_Tank_Collisions()
 		Normal_Potan* bullet = dynamic_cast<Normal_Potan*>(objBullet);
 		if (!bullet || bullet->isHit()) continue;
 
-		Vec3 bulletPos = bullet->GetPos();
+		/*  ì ì´ ì•„ë‹ˆë¼  ì„ ë¶„ìœ¼ë¡œ ë³¸ë‹¤. */
+		const Vec3 bulletPrev = bullet->GetPrevPos();
+		const Vec3 bulletPos  = bullet->GetPos();
+
 		uint8 shooterPlayerID = bullet->GetOwnerID();
 		bool shooterTeam = bullet->isBlueTeam();
 
@@ -810,32 +1005,29 @@ void Room::Detect_Bullet_Tank_Collisions()
 			Tank* targetTank = dynamic_cast<Tank*>((*tankList)[i]);
 			if (!targetTank) continue;
 
-			// ¾Æ±ºÀÌ¸é ¹«½Ã
+			// ì•„êµ°ì´ë©´ ë¬´ì‹œ
 			if (targetTank->isBlueTeam() == shooterTeam)
 				continue;
 
 			if (!targetTank->isSpawned()) continue;
 
-			// Ãæµ¹ ÆÇÁ¤
-			if (!CollisionManager::GetInstance()->CheckCollision_Point_Sphere(bulletPos, targetTank->GetPos(), 5.0f))
+			Vec3 hitPos;
+			if (!CollisionManager::GetInstance()->CheckCollision_Segment_OBB3D(
+					bulletPrev, bulletPos, targetTank->Get_OBB(), &hitPos))
 				continue;
 
-			// Ãæµ¹ ½Ã Ã³¸®
-			auto effectBuffer = ServerPacketHandler::Make_S_WEAPON_HIT(bulletPos.X, bulletPos.Y, bulletPos.Z);
+			// ì´í™íŠ¸ëŠ” ê´€í†µ ì§€ì ì´ ì•„ë‹ˆë¼ ì²˜ìŒ ë‹¿ì€ í‘œë©´ì— ê·¸ë¦°ë‹¤.
+			auto effectBuffer = CPacket_Handler::Make_S_WEAPON_HIT(hitPos.X, hitPos.Y, hitPos.Z);
 			Broadcast(effectBuffer);
 
 			bullet->SetDead();
 			targetTank->Damage(25);
 
-			// ÇÇ°İÀÚ¿¡°Ô TANK_DAMAGED
+			// í”¼ê²©ìì—ê²Œ TANK_DAMAGED
 			for (const Room_Ready_Data& damagedRider : targetTank->GetPassengers())
 			{
-				auto it = _Players.find(damagedRider.PlayerID);
-				if (it != _Players.end() && it->second && it->second->OwenerSession)
-				{
-					auto buffer = ServerPacketHandler::Make_S_TANK_DAMAGED((uint8)i);
-					it->second->OwenerSession->Send(buffer);
-				}
+				if (SessionRef session = FindSession(damagedRider.PlayerID))
+					session->Send(CPacket_Handler::Make_S_TANK_DAMAGED((uint8)i));
 			}
 
 			Tank* shooterTank = nullptr;
@@ -845,38 +1037,31 @@ void Room::Detect_Bullet_Tank_Collisions()
 					shooterTank = dynamic_cast<Tank*>((*tankList)[ownerIdx]);
 			}
 
-			// °ø°İÀÚ¿¡°Ô TANK_HIT
+			// ê³µê²©ìì—ê²Œ TANK_HIT
 			if (shooterTank)
 			{
 				for (const Room_Ready_Data& shooter : shooterTank->GetPassengers())
 				{
-					auto it = _Players.find(shooter.PlayerID);
-					if (it != _Players.end() && it->second && it->second->OwenerSession)
-					{
-						auto buffer = ServerPacketHandler::Make_S_TANK_HIT((uint8)i);
-						it->second->OwenerSession->Send(buffer);
-					}
+					if (SessionRef session = FindSession(shooter.PlayerID))
+						session->Send(CPacket_Handler::Make_S_TANK_HIT((uint8)i));
 				}
 			}
 
-			// »ç¸Á ÆÇÁ¤
+			// ì‚¬ë§ íŒì •
 			if (targetTank->IsDead())
 			{
-				targetTank->SetUnSpawn();
+				targetTank->SetUnSpawn(GetNowMs());
 
-				auto bufferDead = ServerPacketHandler::Make_S_TANK_DEAD((uint8)i);
+				auto bufferDead = CPacket_Handler::Make_S_TANK_DEAD((uint8)i);
 				Broadcast(bufferDead);
 
 				if (shooterTank)
 				{
-					auto bufferKill = ServerPacketHandler::Make_S_TANK_KILL((uint8)i);
+					auto bufferKill = CPacket_Handler::Make_S_TANK_KILL((uint8)i);
 					for (const Room_Ready_Data& killer : shooterTank->GetPassengers())
 					{
-						auto it = _Players.find(killer.PlayerID);
-						if (it != _Players.end() && it->second && it->second->OwenerSession)
-						{
-							it->second->OwenerSession->Send(bufferKill);
-						}
+						if (SessionRef session = FindSession(killer.PlayerID))
+							session->Send(bufferKill);
 					}
 				}
 			}
@@ -885,65 +1070,54 @@ void Room::Detect_Bullet_Tank_Collisions()
 	}
 }
 
+// ê°™ì€ íƒ±í¬ì— íƒ„ ì¸ì›(ì¡°ì¢…ìˆ˜/í¬ìˆ˜)ë§Œ ë½‘ëŠ”ë‹¤.
+// íƒ±í¬ ì¸ë±ìŠ¤ëŠ” í´ë¼ê°€ ë³´ë‚¸ ê°’ì´ë¼ ê·¸ëŒ€ë¡œ ë°°ì—´ì— ë„£ìœ¼ë©´ ì•ˆ ëœë‹¤.
+std::vector<Room_Ready_Data> Room::GetPassengersOf(uint8 tankIndex)
+{
+
+	auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
+	if (!tankList || tankIndex >= tankList->size())
+		return {};
+
+	Tank* pOwnerTank = dynamic_cast<Tank*>((*tankList)[tankIndex]);
+	if (!pOwnerTank)
+		return {};
+
+	return pOwnerTank->GetPassengers();
+}
+
 void Room::Send_RespawnPacket(uint8 tankIndex)
 {
-	
-	auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
-	Tank* OwnerTank = dynamic_cast<Tank*>((*tankList)[tankIndex]);
-	
-	for (const Room_Ready_Data& killer : OwnerTank->GetPassengers())
+	SendBufferRef respawnBuf = CPacket_Handler::Make_S_RespawnTank(tankIndex);
+
+	for (const Room_Ready_Data& rider : GetPassengersOf(tankIndex))
 	{
-
-		auto RespawnBuf = ServerPacketHandler::Make_S_RespawnTank(tankIndex);
-		auto it = _Players.find(killer.PlayerID);
-
-		if (it != _Players.end() && it->second && it->second->OwenerSession)
-		{
-			it->second->OwenerSession->Send(RespawnBuf);
-		}
+		if (SessionRef session = FindSession(rider.PlayerID))
+			session->Send(respawnBuf);
 	}
-	
 }
 
 void Room::Send_SoundData(uint8 tankIndex, float engvol, float engpit, float trkvol, float trkpit)
 {
-	READ_LOCK;
-	auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
-	Tank* OwnerTank = dynamic_cast<Tank*>((*tankList)[tankIndex]);
+	SendBufferRef soundBuf =
+		CPacket_Handler::Make_S_SOUND(tankIndex, engvol, engpit, trkvol, trkpit);
 
-	for (const Room_Ready_Data& killer : OwnerTank->GetPassengers())
+	for (const Room_Ready_Data& rider : GetPassengersOf(tankIndex))
 	{
-
-		auto SoundBuf = ServerPacketHandler::Make_S_SOUND(tankIndex, engvol, engpit, trkvol, trkpit);
-		auto it = _Players.find(killer.PlayerID);
-
-		if (it != _Players.end() && it->second && it->second->OwenerSession)
-		{
-			it->second->OwenerSession->Send(SoundBuf);
-		}
+		if (SessionRef session = FindSession(rider.PlayerID))
+			session->Send(soundBuf);
 	}
-
 }
 
-void Room::Send_PingData(uint8 tankIndex, float X, float Y, float Z) {
+void Room::Send_PingData(uint8 tankIndex, float X, float Y, float Z)
+{
+	SendBufferRef pingBuf = CPacket_Handler::Make_S_PINGPOS(tankIndex, X, Y, Z);
 
-	READ_LOCK;
-	auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
-	Tank* OwnerTank = dynamic_cast<Tank*>((*tankList)[tankIndex]);
-
-
-	for (const Room_Ready_Data& killer : OwnerTank->GetPassengers())
+	for (const Room_Ready_Data& rider : GetPassengersOf(tankIndex))
 	{
-
-		auto PingBUf = ServerPacketHandler::Make_S_PINGPOS(tankIndex, X, Y, Z);
-		auto it = _Players.find(killer.PlayerID);
-
-		if (it != _Players.end() && it->second && it->second->OwenerSession)
-		{
-			it->second->OwenerSession->Send(PingBUf);
-		}
+		if (SessionRef session = FindSession(rider.PlayerID))
+			session->Send(pingBuf);
 	}
-
 }
 
 void Room::Detect_Bullet_Terrain_Collisions()
@@ -958,38 +1132,20 @@ void Room::Detect_Bullet_Terrain_Collisions()
 		Normal_Potan* bullet = dynamic_cast<Normal_Potan*>(objBullet);
 		if (!bullet || bullet->isHit()) continue;
 
-		if (CollisionManager::GetInstance()->Check_Terrain_Collision(bullet))
+		/*  ì§€í˜•ë„ ì„ ë¶„ìœ¼ë¡œ ë³¸ë‹¤. ì  íŒì •ì´ë©´ ëŠ¥ì„ ì„ ìŠ¤ì¹˜ëŠ” íƒ„ì´ ê·¸ëƒ¥ í†µê³¼í•œë‹¤. */
+		Vec3 hitPos;
+		if (CollisionManager::GetInstance()->CheckCollision_Segment_Terrain(
+				bullet->GetPrevPos(), bullet->GetPos(), &hitPos))
 		{
+			bullet->SetDead(); // ì´ì•Œ ì œê±°
 
-		
+			/*  â˜… ì—¬ê¸°ì„œ ì§€í˜• ì¶©ëŒë§ˆë‹¤ íƒ±í¬ ì „ì›ì˜ OBB ë¥¼ cout ìœ¼ë¡œ 20ì¤„ì”© ì°ê³  ìˆì—ˆë‹¤.
+			    ì´ì•Œì´ ë•…ì— ë§ì„ ë•Œë§ˆë‹¤ ë‚˜ì˜¤ë‹ˆ ì‚¬ê²© ì¤‘ì—ëŠ” ê±°ì˜ ë§¤ í”„ë ˆì„ì´ê³ ,
+			    ê·¸ê²Œ ë””ë²„ê·¸ ì½˜ì†”ì˜ ê³ ì • í‘œë¥¼ ì•„ë˜ë¡œ ë°€ì–´ë‚´ë©° í™”ë©´ì„ ì±„ì› ë‹¤.
+			    í•„ìš”í•œ ìƒíƒœëŠ” ëŒ€ì‹œë³´ë“œê°€ ë°© ì¤„ ì˜†ì— ê·¸ë¦°ë‹¤(Room::GetLiveInfo).
+			    ì½˜ì†” ì¶œë ¥ì€ ë½ì´ ê±¸ë¦° ëŠë¦° I/O ë¼, ê²Œì„ ë£¨í”„ì—ì„œ ë¶€ë¥´ëŠ” ê²ƒ ìì²´ê°€ ì†í•´ë‹¤.  */
 
-			Vec3 hitPos = bullet->GetPos();
-			bullet->SetDead(); // ÃÑ¾Ë Á¦°Å
-
-			std::cout << "\n=== ÁöÇü Ãæµ¹ ¹ß»ı ===" << std::endl;
-			std::cout << "ÃÑ¾Ë À§Ä¡: X=" << hitPos.X << " Y=" << hitPos.Y << " Z=" << hitPos.Z << std::endl;
-
-			auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
-			if (tankList)
-			{
-				std::cout << "--- ÅÊÅ© OBB Á¤º¸ ---" << std::endl;
-				for (size_t i = 0; i < tankList->size(); ++i)
-				{
-					Tank* tank = dynamic_cast<Tank*>((*tankList)[i]);
-					if (!tank) continue;
-
-					OBB obb = tank->Get_OBB();
-
-					std::cout << "[ÅÊÅ© " << i << "]" << std::endl;
-					std::cout << "Center: X=" << obb.center.X << " Y=" << obb.center.Y << " Z=" << obb.center.Z << std::endl;
-					std::cout << "HalfSize: X=" << obb.halfSize.X << " Y=" << obb.halfSize.Y << " Z=" << obb.halfSize.Z << std::endl;
-
-					std::cout << "Axis[0] (Right): X=" << obb.axis[0].X << " Y=" << obb.axis[0].Y << " Z=" << obb.axis[0].Z << std::endl;
-					std::cout << "Axis[1] (Up):    X=" << obb.axis[1].X << " Y=" << obb.axis[1].Y << " Z=" << obb.axis[1].Z << std::endl;
-					std::cout << "Axis[2] (Look):  X=" << obb.axis[2].X << " Y=" << obb.axis[2].Y << " Z=" << obb.axis[2].Z << std::endl;
-				}
-			}
-			auto sendBuffer = ServerPacketHandler::Make_S_WEAPON_HIT(hitPos.X, hitPos.Y, hitPos.Z);
+			auto sendBuffer = CPacket_Handler::Make_S_WEAPON_HIT(hitPos.X, hitPos.Y, hitPos.Z);
 			Broadcast(sendBuffer);
 		}
 	}
@@ -1039,11 +1195,11 @@ void Room::UpdateCaptureGauge(float deltaTime)
 		}
 	}
 
-	// Á¡·É·ü ´©Àû
+	// ì ë ¹ë¥  ëˆ„ì 
 	blueGauge += blueCount * gaugePerTankPerSecond * deltaTime;
 	redGauge += redCount * gaugePerTankPerSecond * deltaTime;
 
-	//Á¤¼ö ´ÜÀ§·Î Áõ°¡Çß´ÂÁö °¨Áö
+	//ì •ìˆ˜ ë‹¨ìœ„ë¡œ ì¦ê°€í–ˆëŠ”ì§€ ê°ì§€
 	int currBlueInt = static_cast<int>(blueGauge);
 	int currRedInt = static_cast<int>(redGauge);
 
@@ -1063,12 +1219,9 @@ void Room::UpdateCaptureGauge(float deltaTime)
 
 	if (shouldBroadcast)
 	{
-		auto buffer = ServerPacketHandler::Make_S_CAPTURE(blueGauge, redGauge);
+		auto buffer = CPacket_Handler::Make_S_CAPTURE(blueGauge, redGauge);
 		Broadcast(buffer);
 	}
-
-	// µğ¹ö±ë Ãâ·Â
-	std::cout << "Á¡·É·ü ¡æ BLUE: " << blueGauge << " / RED: " << redGauge << std::endl;
 
 	if (blueGauge >= 100.f) OnTeamWin(true);
 	else if (redGauge >= 100.f) OnTeamWin(false);
@@ -1076,57 +1229,74 @@ void Room::UpdateCaptureGauge(float deltaTime)
 
 void Room::ResetRoom()
 {
-	WRITE_LOCK;
+	/*  ë°© ì¡ ì•ˆì—ì„œë§Œ ë¶€ë¥¼ ê²ƒ.
+	    Room_ObjectManager.Release() ê°€ ì˜¤ë¸Œì íŠ¸ë¥¼ ì „ë¶€ delete í•˜ë¯€ë¡œ*/
 
 	CurState = ROOM_WAITTING;
 	blueGauge = 0.f;
 	redGauge = 0.f;
 	isGameEnded = false;
-	Wait_LoadingCnt = 0;
+	_resetTimer = 0.f;
 
-	Room_ObjectManager.Release(); // ¸ğµç ¿ÀºêÁ§Æ® Á¦°Å
+	/*  ê²Œì´ì§€ ë¸Œë¡œë“œìºìŠ¤íŠ¸ ê¸°ì¤€ê°’ë„ ë˜ëŒë¦°ë‹¤. ì•ˆ ë˜ëŒë¦¬ë©´ ë‹¤ìŒ íŒì—ì„œ
+	    ì ë ¹ë¥ ì´ ì§€ë‚œ íŒ ìµœê³ ì¹˜ë¥¼ ë„˜ê¸° ì „ê¹Œì§€ S_CAPTURE ê°€ ì•ˆ ë‚˜ê°„ë‹¤. */
+	lastSentBlueGauge = 0;
+	lastSentRedGauge = 0;
+
+	Room_ObjectManager.Release(); // ëª¨ë“  ì˜¤ë¸Œì íŠ¸ ì œê±°
+
+	Wait_LoadingCnt = 0;
 	for (auto& tankState : _Player_States)
 		tankState.second.IsReady = false;
 
-	/*BroadCast_LobbyInfo();*/
+	/*  ê³µê°œ ìŠ¤ëƒ…ìƒ·ë„ ê°™ì´ ë˜ëŒë¦°ë‹¤.   */
+	_displayBlueGauge.store(0);
+	_displayRedGauge.store(0);
+	_displayTankCount.store(0);
+	_displayGameStartMs.store(0);
+
+	_lastTickMs.store(0);
 }
 
 void Room::OnTeamWin(bool isBlueWinner)
 {
+	if (isGameEnded)
+		return;
+
 	isGameEnded = true;
+
+	// ìŠ¹/íŒ¨ëŠ” íŒ€ë³„ë¡œ ë‹¤ë¥¸ íŒ¨í‚·ì´ë¼ ë¨¼ì € <ì„¸ì…˜, ì´ê¸´ íŒ€ì¸ê°€> ë¡œ ëª¨ì•„ ë‘”ë‹¤.
+	std::vector<std::pair<SessionRef, bool>> targets;
+	targets.reserve(_Players.size());
 
 	for (const auto& pair : _Players)
 	{
-		PlayerRef player = pair.second;
+		const PlayerRef& player = pair.second;
 		if (!player || !player->OwenerSession) continue;
 
-		const Room_Ready_Data& data = _Player_States[player->playerID];
-		if (data.Team == isBlueWinner)
-		{
-			auto winMsg = ServerPacketHandler::Make_S_GAME_WIN(1);   // ½Â¸® ÆĞÅ¶
-			player->OwenerSession->Send(winMsg);
-		}
-		else
-		{
-			auto loseMsg = ServerPacketHandler::Make_S_GAME_LOSE(1); // ÆĞ¹è ÆĞÅ¶
-			player->OwenerSession->Send(loseMsg);
-		}
-	}
-	system("PAUSE");
-	//ShowMessageForFrames(isBlueWinner ? "ºí·çÆÀÀÌ ½Â¸®Çß½À´Ï´Ù!" : "·¹µåÆÀÀÌ ½Â¸®Çß½À´Ï´Ù!", 300);
+		auto stateIt = _Player_States.find(player->playerID);
+		if (stateIt == _Player_States.end()) continue;
 
-	// 3ÃÊ ÈÄ ÃÊ±âÈ­ ¿¹¾à
-	std::thread([this]()
-		{
-			std::this_thread::sleep_for(std::chrono::seconds(3));
-			this->ResetRoom();
-		}).detach();
+		targets.emplace_back(player->OwenerSession, stateIt->second.Team == isBlueWinner);
+	}
+
+	SendBufferRef winMsg  = CPacket_Handler::Make_S_GAME_WIN(1);
+	SendBufferRef loseMsg = CPacket_Handler::Make_S_GAME_LOSE(1);
+
+	for (auto& target : targets)
+		target.first->Send(target.second ? winMsg : loseMsg);
+
+
+	/*  ì´ˆê¸°í™”ëŠ” ì—¬ê¸°ì„œ í•˜ì§€ ì•ŠëŠ”ë‹¤. isGameEnded ë¥¼ ì„¸ì›Œ ë‘ë©´
+	    Room::Update ê°€ ROOM_RESET_DELAY ë§Œí¼ ì„¸ê³  ResetRoom ì„ ë¶€ë¥¸ë‹¤.
+	    (ê·¸ë˜ì•¼ ë°© ì¡ ì•ˆì—ì„œ, ì•„ë¬´ë„ ì´ ë°©ì„ ì•ˆ ë§Œì§€ëŠ” ì‹œì ì— ì‹¤í–‰ëœë‹¤) */
+	_resetTimer = 0.f;
 }
 
 
 void Room::Detect_Bomb_Tank_Collisions()
 {
-	auto bombList = Room_ObjectManager.Get_List(OBJ_BOMB); // Bomb Àü¿ë ÄÁÅ×ÀÌ³Ê ±ÇÀå
+	auto bombList = Room_ObjectManager.Get_List(OBJ_BOMB); // Bomb ì „ìš© ì»¨í…Œì´ë„ˆ ê¶Œì¥
 	auto tankList = Room_ObjectManager.Get_List(OBJ_TANK);
 	if (!bombList || !tankList) return;
 
@@ -1137,13 +1307,14 @@ void Room::Detect_Bomb_Tank_Collisions()
 		AirDrop_Bomb* bomb = dynamic_cast<AirDrop_Bomb*>(objBomb);
 		if (!bomb || bomb->isHit()) continue;
 
-		Vec3 bombPos = bomb->GetPos();
+		const Vec3 bombPrev = bomb->GetPrevPos();
+		const Vec3 bombPos  = bomb->GetPos();
 
-		// BombÀÇ ¿À³Ê Á¤º¸ »ç¿ë (¾Æ±º/Àû±º ¹«°ü Å¸°İ)
+		// Bombì˜ ì˜¤ë„ˆ ì •ë³´ ì‚¬ìš© (ì•„êµ°/ì êµ° ë¬´ê´€ íƒ€ê²©)
 		const uint8 ownerPlayerID = bomb->GetOwnerID();
 		const uint8 ownerTankIdx = bomb->GetOwnerTankIndex();
 
-		// (¼±ÅÃ) °ø°İÀÚ ÅÊÅ© Æ÷ÀÎÅÍ ¹Ì¸® È®º¸
+		// (ì„ íƒ) ê³µê²©ì íƒ±í¬ í¬ì¸í„° ë¯¸ë¦¬ í™•ë³´
 		Tank* shooterTank = nullptr;
 		if (ownerTankIdx < (uint8)tankList->size())
 			shooterTank = dynamic_cast<Tank*>((*tankList)[ownerTankIdx]);
@@ -1154,56 +1325,51 @@ void Room::Detect_Bomb_Tank_Collisions()
 			if (!targetTank) continue;
 			if (!targetTank->isSpawned()) continue;
 
-			// ÆÀ ±¸ºĞ ¾øÀ½: Æ÷ÀÎÆ®-½ºÇÇ¾î °£´Ü Ãæµ¹
-			if (!CollisionManager::GetInstance()->CheckCollision_Point_Sphere(bombPos, targetTank->GetPos(), 5.0f))
+			// íŒ€ êµ¬ë¶„ ì—†ìŒ. íŒì •ì€ ì´ì•Œê³¼ ê°™ì€ ì„ ë¶„ â†” OBB.
+			Vec3 bombHitPos;
+			if (!CollisionManager::GetInstance()->CheckCollision_Segment_OBB3D(
+					bombPrev, bombPos, targetTank->Get_OBB(), &bombHitPos))
 				continue;
 
-			// 1) ÀÌÆåÆ® ºê·ÎµåÄ³½ºÆ®
+			// 1) ì´í™íŠ¸ ë¸Œë¡œë“œìºìŠ¤íŠ¸
 			{
-				auto effectBuffer = ServerPacketHandler::Make_S_WEAPON_HIT(bombPos.X, bombPos.Y, bombPos.Z);
+				auto effectBuffer = CPacket_Handler::Make_S_WEAPON_HIT(bombHitPos.X, bombHitPos.Y, bombHitPos.Z);
 				Broadcast(effectBuffer);
 			}
 
-			// 2) Bomb Á¦°Å(ÇÑ ¹ø ¸ÂÀ¸¸é ³¡)
+			// 2) Bomb ì œê±°(í•œ ë²ˆ ë§ìœ¼ë©´ ë)
 			bomb->SetDead();
 
-			// 3) µ¥¹ÌÁö Àû¿ë (¿øÇÏ´Â ¼öÄ¡·Î)
+			// 3) ë°ë¯¸ì§€ ì ìš© (ì›í•˜ëŠ” ìˆ˜ì¹˜ë¡œ)
 			targetTank->Damage(25);
 
-			// 4) ÇÇ°İÀÚ(Å¾½ÂÀÚ Àü¿ø)¿¡°Ô TANK_DAMAGED
+			// 4) í”¼ê²©ì(íƒ‘ìŠ¹ì ì „ì›)ì—ê²Œ TANK_DAMAGED
 			for (const Room_Ready_Data& damagedRider : targetTank->GetPassengers())
 			{
-				auto it = _Players.find(damagedRider.PlayerID);
-				if (it != _Players.end() && it->second && it->second->OwenerSession)
-				{
-					auto buffer = ServerPacketHandler::Make_S_TANK_DAMAGED((uint8)i); // i = Å¸°Ù ÅÊÅ© ÀÎµ¦½º
-					it->second->OwenerSession->Send(buffer);
-				}
+				if (SessionRef session = FindSession(damagedRider.PlayerID))
+					session->Send(CPacket_Handler::Make_S_TANK_DAMAGED((uint8)i));
 			}
 
-			// 5) »ç¸Á ½Ã: DEAD ºê·ÎµåÄ³½ºÆ® + (ÀÖ´Ù¸é) ¿À³Ê¿¡°Ô KILL
+			// 5) ì‚¬ë§ ì‹œ: DEAD ë¸Œë¡œë“œìºìŠ¤íŠ¸ + (ìˆë‹¤ë©´) ì˜¤ë„ˆì—ê²Œ KILL
 			if (targetTank->IsDead())
 			{
-				targetTank->SetUnSpawn();
+				targetTank->SetUnSpawn(GetNowMs());
 
-				auto bufferDead = ServerPacketHandler::Make_S_TANK_DEAD((uint8)i);
+				auto bufferDead = CPacket_Handler::Make_S_TANK_DEAD((uint8)i);
 				Broadcast(bufferDead);
 
 				if (shooterTank)
 				{
-					auto bufferKill = ServerPacketHandler::Make_S_TANK_KILL((uint8)i);
+					auto bufferKill = CPacket_Handler::Make_S_TANK_KILL((uint8)i);
 					for (const Room_Ready_Data& killer : shooterTank->GetPassengers())
 					{
-						auto it = _Players.find(killer.PlayerID);
-						if (it != _Players.end() && it->second && it->second->OwenerSession)
-						{
-							it->second->OwenerSession->Send(bufferKill);
-						}
+						if (SessionRef session = FindSession(killer.PlayerID))
+							session->Send(bufferKill);
 					}
 				}
 			}
 
-			break; // ÇÑ ÆøÅºÀ¸·Î ÇÏ³ª ¸ÂÃèÀ¸¸é Á¾·á
+			break; // í•œ í­íƒ„ìœ¼ë¡œ í•˜ë‚˜ ë§ì·„ìœ¼ë©´ ì¢…ë£Œ
 		}
 	}
 }
@@ -1221,12 +1387,13 @@ void Room::Detect_Bomb_Terrain_Collisions()
 		AirDrop_Bomb* bomb = dynamic_cast<AirDrop_Bomb*>(objBomb);
 		if (!bomb || bomb->isHit()) continue;
 
-		if (CollisionManager::GetInstance()->Check_Terrain_Collision(bomb))
+		Vec3 hitPos;
+		if (CollisionManager::GetInstance()->CheckCollision_Segment_Terrain(
+				bomb->GetPrevPos(), bomb->GetPos(), &hitPos))
 		{
-			Vec3 hitPos = bomb->GetPos();
 			bomb->SetDead();
 
-			auto sendBuffer = ServerPacketHandler::Make_S_WEAPON_HIT(hitPos.X, hitPos.Y, hitPos.Z);
+			auto sendBuffer = CPacket_Handler::Make_S_WEAPON_HIT(hitPos.X, hitPos.Y, hitPos.Z);
 			Broadcast(sendBuffer);
 		}
 	}

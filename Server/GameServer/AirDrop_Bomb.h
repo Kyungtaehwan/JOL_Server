@@ -26,7 +26,6 @@ public:
 	void ProcessMove(float deltaTime);
 
 private:
-	USE_LOCK;
 	float speed = 50.f;
 };
 

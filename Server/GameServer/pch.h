@@ -1,19 +1,65 @@
-#pragma once
+ï»¿#pragma once
 
-#define WIN32_LEAN_AND_MEAN // °ÅÀÇ »ç¿ëµÇÁö ¾Ê´Â ³»¿ëÀ» Windows Çì´õ¿¡¼­ Á¦¿ÜÇÕ´Ï´Ù.
+#define WIN32_LEAN_AND_MEAN
+#include <WinSock2.h>
+#include <MSWSock.h>
+#include <WS2tcpip.h>
+#include <Windows.h>
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "mswsock.lib")
 
-#ifdef _DEBUG
-#pragma comment(lib, "Debug\\ServerCore.lib")
-#else
-#pragma comment(lib, "Release\\ServerCore.lib")
-#endif
-
-#include "CorePch.h"
-#include "iostream"
-
+#include <cstdint>
+#include <cstring>
 #include <cmath>
-#include <algorithm>
-#include <memory>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <iomanip>
 
-using ClientSessionRef = shared_ptr<class ClientSession>;
-using PlayerRef = shared_ptr<class Player>;
+#include "ServerLog.h"   // SERVER_LOG
+#include <vector>
+#include <array>
+#include <map>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include <queue>
+#include <deque>
+#include <list>
+#include <memory>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <chrono>
+#include <algorithm>
+#include <functional>
+
+using namespace std;
+
+// ================================================================
+//  ê¸°ë³¸ íƒ€ì…
+// ================================================================
+using BYTE   = unsigned char;
+using int8   = __int8;
+using int16  = __int16;
+using int32  = __int32;
+using int64  = __int64;
+using uint8  = unsigned __int8;
+using uint16 = unsigned __int16;
+using uint32 = unsigned __int32;
+using uint64 = unsigned __int64;
+
+template<typename T>
+using Atomic = std::atomic<T>;
+
+#define size16(val)     static_cast<int16>(sizeof(val))
+#define size32(val)     static_cast<int32>(sizeof(val))
+#define len16(arr)      static_cast<int16>(sizeof(arr)/sizeof(arr[0]))
+#define len32(arr)      static_cast<int32>(sizeof(arr)/sizeof(arr[0]))
+
+#include "ServerConfig.h"
+#include "SendBuffer.h"
+
+// ìˆœí™˜ include ì—†ì´ ì„œë¡œë¥¼ ê°€ë¦¬í‚¬ ìˆ˜ ìˆë„ë¡ ì—¬ê¸°ì„œ ì „ë°© ì„ ì–¸
+using SessionRef = std::shared_ptr<class CSession>;
+using PlayerRef  = std::shared_ptr<class Player>;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 struct Vec2;
 struct Vec3;
@@ -26,6 +26,15 @@ public:
 
 	// 3D Point vs OBB
 	bool CheckCollision_Point_OBB3D(const Vec3& point, const OBB& obb);
+
+	// ================================================================
+	//  선 판정 - 빠른 발사체가 틱 사이에 물체를 통과하는 것을 막는다
+	// ================================================================
+	bool CheckCollision_Segment_OBB3D(const Vec3& startPos, const Vec3& endPos,
+									  const OBB& obb, Vec3* pOutHit = nullptr);
+
+	bool CheckCollision_Segment_Terrain(const Vec3& p0, const Vec3& p1,
+										Vec3* pOutHit = nullptr);
 
 	bool Check_Terrain_Collision(GameObject* GameObejct);
 

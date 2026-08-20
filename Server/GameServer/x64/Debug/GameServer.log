@@ -1,13 +1,88 @@
-﻿  Normal_Potan.cpp
+﻿  pch.cpp
+  AirDrop_Bomb.cpp
+  Collision_Manager.cpp
+  Drone.cpp
+  GameServer.cpp
+  ClientSession.cpp
+  ClientSessionManager.cpp
+  GameObject.cpp
+  Normal_Potan.cpp
+  ObjectManager.cpp
+  Player.cpp
+  Room_Manager.cpp
+  SGlobal.cpp
+  Tank.cpp
   Room.cpp
-C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\Room.cpp(592,60): warning C4267: '=': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  ServerPacketHandler.cpp
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\Room.cpp(617,60): warning C4267: '=': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   (소스 파일 '/Room.cpp'을(를) 컴파일하는 중)
   
-C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\Room.cpp(977,64): warning C4244: '인수': 'float'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\Room.cpp(1066,64): warning C4244: '인수': 'float'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   (소스 파일 '/Room.cpp'을(를) 컴파일하는 중)
   
-C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\Room.cpp(977,53): warning C4244: '인수': 'float'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\Room.cpp(1066,53): warning C4244: '인수': 'float'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   (소스 파일 '/Room.cpp'을(를) 컴파일하는 중)
   
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(172,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(195,11): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(196,16): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(229,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(260,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(282,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(284,62): warning C4244: '인수': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(305,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(327,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(388,71): warning C4244: '인수': 'uint64'에서 'uint32'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(389,75): warning C4244: '인수': 'uint64'에서 'uint32'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(401,15): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(402,11): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(419,15): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(420,11): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(431,15): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(442,15): warning C4244: '초기화 중': 'uint64'에서 'uint8'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(467,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\GameServer\ServerPacketHandler.cpp(498,14): warning C4244: '초기화 중': 'uint64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ServerPacketHandler.cpp'을(를) 컴파일하는 중)
+  
+  Terrain_Manager.cpp
+  TransformObject.cpp
+  Tree.cpp
+  Weapon.cpp
   코드를 생성하고 있습니다...
-  GameServer.vcxproj -> C:\Users\kkth3\OneDrive\문서\GitHub\JOL_Server\Server\Binary\Debug\GameServer.exe
+LINK : fatal error LNK1104: 'Debug\ServerCore.lib' 파일을 열 수 없습니다.

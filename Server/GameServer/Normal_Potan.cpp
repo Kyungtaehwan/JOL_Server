@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "Normal_Potan.h"
 #include "Terrain_Manager.h"
 
@@ -37,7 +37,11 @@ void Normal_Potan::SetInitData(Vec3& normalizedDirection, Vec3& startPos,uint8 T
 
     OwnerID = ID;
     _myPos = startPos;
-    direction = normalizedDirection;   // Á¤±ÔÈ­µÈ ¹æÇâº¤ÅÍ ¸â¹ö º¯¼ö·Î ÀúÀå                    // ÃÊ±â ¼Óµµ ¸â¹ö º¯¼ö·Î °íÁ¤
+
+    /*  â˜… ì„ ë¶„ íŒì •ì˜ ì‹œì‘ì . ì—¬ê¸°ì„œ ì•ˆ ì±„ìš°ë©´ ì²« í‹±ì— (0,0,0) â†’ ì´êµ¬ ì„ ë¶„ì´
+        ë§Œë“¤ì–´ì ¸ ë§µì„ ê°€ë¡œì§€ë¥´ë©° ë„ì¤‘ì˜ ëª¨ë“  íƒ±í¬ì— ë§ëŠ”ë‹¤.  */
+    _prevPos = startPos;
+    direction = normalizedDirection;   // ì •ê·œí™”ëœ ë°©í–¥ë²¡í„° ë©¤ë²„ ë³€ìˆ˜ë¡œ ì €ì¥                    // ì´ˆê¸° ì†ë„ ë©¤ë²„ ë³€ìˆ˜ë¡œ ê³ ì •
     velocity = {
         direction.X * speed,
         direction.Y * speed,
@@ -50,19 +54,21 @@ void Normal_Potan::SetInitData(Vec3& normalizedDirection, Vec3& startPos,uint8 T
 
 void Normal_Potan::Process_Move(float deltaTime)
 {
+    Save_PrevPos();     // ì´ë²ˆ í‹±ì˜ ì„ ë¶„ ì‹œì‘ì 
+
     Vec3 gravity = { 0.f, -6.8f, 0.f };
 
-    // Áß·Â °¡¼Óµµ¸¦ velocity¿¡ ´õÇÔ (v = v + a * dt)
+    // ì¤‘ë ¥ ê°€ì†ë„ë¥¼ velocityì— ë”í•¨ (v = v + a * dt)
     velocity.X += gravity.X * deltaTime;
     velocity.Y += gravity.Y * deltaTime;
     velocity.Z += gravity.Z * deltaTime;
 
-    // À§Ä¡¸¦ velocity ¹æÇâÀ¸·Î deltaTime ¸¸Å­ ÀÌµ¿ (p = p + v * dt)
+    // ìœ„ì¹˜ë¥¼ velocity ë°©í–¥ìœ¼ë¡œ deltaTime ë§Œí¼ ì´ë™ (p = p + v * dt)
     _myPos.X += velocity.X * deltaTime;
     _myPos.Y += velocity.Y * deltaTime;
     _myPos.Z += velocity.Z * deltaTime;
 
-    const float BOUND_LIMIT = 1900.f; // ÀÓ°è°ª
+    const float BOUND_LIMIT = 1900.f; // ì„ê³„ê°’
     if (_myPos.X < -BOUND_LIMIT || _myPos.X > BOUND_LIMIT ||
         _myPos.Z < -BOUND_LIMIT || _myPos.Z > BOUND_LIMIT)
     {

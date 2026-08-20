@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "GameObject.h"
 class TransformObject : public GameObject
 {
@@ -13,7 +13,7 @@ public:
 	void SetTransform(const Matrix4x4& mat) { TransformMatrix = mat; }
 	const Matrix4x4& GetTransform() const { return TransformMatrix; }
 
-	// ÇÊ¿äÇÏ´Ù¸é Posµµ µ¿±âÈ­ÇÒ ¼ö ÀÖµµ·Ï
+	// í•„ìš”í•˜ë‹¤ë©´ Posë„ ë™ê¸°í™”í•  ìˆ˜ ìˆë„ë¡
 	void SyncPosFromMatrix() {
 		_myPos.X = TransformMatrix.m[3][0];
 		_myPos.Y = TransformMatrix.m[3][1];

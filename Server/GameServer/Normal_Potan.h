@@ -28,7 +28,6 @@ public:
 	uint8		GetOwnerTankIndex() { return OwnerTankIndex; };
 
 private:
-	USE_LOCK;
 	float speed = 150.f;
 
 	bool isActive = false;
